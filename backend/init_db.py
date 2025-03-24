@@ -1,0 +1,30 @@
+import pandas as pd
+import sqlite3
+from sqlalchemy import create_engine
+import os
+
+
+csv_file = 'bank_transactions.csv'
+db_file = 'customers.db'
+
+# check if the csv file exists
+if not os.path.exists(csv_file):
+    print(f" cannot find {csv_file},please ensure it is within the backend folder")
+    exit()
+
+# read the csv file
+print("Reading CSV data...")
+df = pd.read_csv(csv_file)
+
+# data preview
+print("Data preview：")
+print(df.head())
+
+# create a sqlite database
+engine = create_engine(f'sqlite:///{db_file}', echo=False)
+
+# load the data into the database
+print(" Writing to SQLite...")
+df.to_sql('transactions', con=engine, index=False, if_exists='replace')
+
+print(" Data written successfully to customers.db -> table name：transactions")
