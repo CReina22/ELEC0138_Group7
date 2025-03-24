@@ -1,0 +1,29 @@
+/*Background Picture*/
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: url('./images/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* login box */
+.login-box {
+    background-color: rgba(255, 255, 255, 0.85); 
+    border-radius: 15px; 
+    width: 480px; 
+    padding: 50px; 
+    margin-top: 150px; 
+    margin-right: 80px; 
+}
+
+
+.login-box input {
+    height: 50px; 
+    font-size: 20px; 
+}
+
+.login-box button {
+    height: 50px; 
+    font-size: 18px; 
+}
