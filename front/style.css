@@ -1,13 +1,22 @@
-/*Background Picture*/
-html, body {
+
+/* default page with bg */
+body.with-bg {
+    background: url('./images/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
     height: 100%;
     margin: 0;
     padding: 0;
-    background: url('./images/bg.jpg') no-repeat center center fixed;
-    background-size: cover;
 }
 
-/* login box */
+/* dashboard page */
+body.no-bg {
+    background: white;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* login/register/dashboard box  */
 .login-box {
     background-color: rgba(255, 255, 255, 0.85); 
     border-radius: 15px; 
@@ -18,11 +27,7 @@ html, body {
 }
 
 
-.login-box input {
-    height: 50px; 
-    font-size: 20px; 
-}
-
+/* button */
 .login-box button {
     height: 50px; 
     font-size: 18px; 
