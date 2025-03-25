@@ -28,3 +28,23 @@ print(" Writing to SQLite...")
 df.to_sql('transactions', con=engine, index=False, if_exists='replace')
 
 print(" Data written successfully to customers.db -> table name：transactions")
+
+
+# create a users table to store the login credentials
+conn = sqlite3.connect('customers.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+''')
+
+# optional: insert a default user
+cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ("admin", "1234"))
+
+conn.commit()
+conn.close()
+print("users table created！")

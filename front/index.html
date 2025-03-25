@@ -43,7 +43,25 @@
             <!-- main page after login -->
             <div id="dashboard-section" class="container-fluid p-5" style="display: none;">
                 <h2 class="text-center">Welcome, <span id="user-display"></span>!</h2>
-                <p class="mt-3">Account Balance: £<span id="balance">1000</span></p>
+
+                <!-- display transactions -->
+                <div class="mt-4">
+                    <h4>Recent Transactions</h4>
+                    <table class="table table-striped" id="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Customer ID</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use js to insert data -->
+                        </tbody>
+                    </table>
+                </div>
+
                 <button class="btn btn-secondary w-100 mt-3" onclick="logout()">Log Out</button>
             </div>
 
