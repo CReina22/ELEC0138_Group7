@@ -225,6 +225,8 @@ if __name__ == '__main__':
         if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
             threading.Timer(1.5, open_browser).start()
 
-        print("Backend server is running at http://127.0.0.1:5000")
-        app.run(debug=True)
-
+        host_ip = '0.0.0.0'  # Listen on all available interfaces
+        port = 5000
+        print(f"Backend server is running at http://{host_ip}:{port}")
+        print(f"Access from another device using your computer's IP address and port {port}")
+        app.run(debug=True, host=host_ip, port=port)
