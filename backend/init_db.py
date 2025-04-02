@@ -34,7 +34,7 @@ print(" Data written successfully to customers.db -> table name：transactions")
 conn = sqlite3.connect('customers.db')
 cursor = conn.cursor()
 
-cursor.execute("DROP TABLE IF EXISTS users")
+#cursor.execute("DROP TABLE IF EXISTS users")
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
