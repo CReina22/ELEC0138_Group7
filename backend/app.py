@@ -194,18 +194,37 @@ def login():
     conn.close()
 
     if user:
-        return jsonify({"success": True})
+        user_id = user[0]       # id
+        username = user[1]      # username
+        is_fake = user[-1]      # is_fake column
+
+        return jsonify({
+            "success": True,
+            "user_id": user_id,
+            "username": username,
+            "is_fake": is_fake
+        })
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 
 # get transaction port
-@app.route('/transactions', methods=['GET'])
+@app.route('/transactions', methods=['POST'])
 def get_transactions():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    is_fake = data.get("is_fake")
+    
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM transactions LIMIT 100")
+    if is_fake:
+        # testuser: display assigned transactions
+        cursor.execute("SELECT * FROM transactions WHERE user_id = ?", (user_id,))
+    else:
+        # real users：display first 100 transactions
+        cursor.execute("SELECT * FROM transactions LIMIT 100")
+        
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     conn.close()

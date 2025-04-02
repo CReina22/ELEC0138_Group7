@@ -28,8 +28,12 @@ function showLogin() {
 
 
 // load transactions from API
-function loadTransactions() {
-    fetch(`${API_BASE}/transactions`)
+function loadTransactions(user_id, is_fake) {
+    fetch(`${API_BASE}/transactions`,{
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, is_fake })
+    })
         .then(response => response.json())
         .then(data => {
             const tableBody = document.querySelector('#transactions-table tbody');
@@ -42,6 +46,7 @@ function loadTransactions() {
                     <td>${txn.CustomerID}</td>
                     <td>${txn['TransactionAmount (INR)']}</td>
                     <td>${txn.TransactionDate || '-'}</td>
+                    <td>${txn.CustAccountBalance || '-'}</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -70,9 +75,15 @@ function login() {
     .then(data => {
         if (data.success) {
             document.getElementById('auth-box').style.display = 'none';
-            loadTransactions(); // load transactions after login
-            document.getElementById('dashboard-section').style.display = 'block';
+            // store user_id 和 is_fake
+            window.currentUser = {
+            user_id: data.user_id,
+            is_fake: data.is_fake
+            };
 
+            loadTransactions(data.user_id, data.is_fake); // `load transactions after login
+
+            document.getElementById('dashboard-section').style.display = 'block';
             // change background
             document.body.classList.remove('with-bg');
             document.body.classList.add('no-bg');

@@ -59,6 +59,15 @@ cursor.execute('''
     )
 ''')
 
+try:
+    cursor.execute("ALTER TABLE users ADD COLUMN is_fake INTEGER DEFAULT 0")
+    print("is_fake column added to users table")
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e).lower():
+        print("is_fake column already exists, skipping...")
+    else:
+        print("Error adding is_fake column:", e)
+
 # optional: insert a default user
 cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ("admin", "1234"))
 

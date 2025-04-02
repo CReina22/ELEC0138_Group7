@@ -12,7 +12,7 @@ def random_string(length=8):
 
 # insert fake users into the database
 num_fake_users = 50
-records_per_user = 10  # assign 10 records to each fake user
+records_per_user = 20  # assign 20 records to each fake user
 
 # genarate fake users & passwords & emails
 for i in range(num_fake_users):
@@ -23,14 +23,15 @@ for i in range(num_fake_users):
     # check if email already exists
     cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
     if cursor.fetchone():
-        print(f"Email {email} already exists. Skipping...")
+        print(f"Email {email} already exists. Updating is_fake = 1")
+        cursor.execute("UPDATE users SET is_fake = 1 WHERE email = ?", (email,))
         continue  # skip this user if already exists
 
     # verification_code_register and verification_code_login set to be NULL or  ''
     cursor.execute('''
-        INSERT INTO users (username, password, email, verification_code_register, verification_code_login)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (username, password, email, None, None))
+        INSERT INTO users (username, password, email, verification_code_register, verification_code_login,is_fake)
+        VALUES (?, ?, ?, ?, ?,?)
+    ''', (username, password, email, None, None,1))
 
     print(f"Inserted: {username} / {password} / {email}")
     
