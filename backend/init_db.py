@@ -29,6 +29,17 @@ df.to_sql('transactions', con=engine, index=False, if_exists='replace')
 
 print(" Data written successfully to customers.db -> table name：transactions")
 
+try:
+    with sqlite3.connect(db_file) as conn_tmp:
+        cursor_tmp = conn_tmp.cursor()
+        cursor_tmp.execute("ALTER TABLE transactions ADD COLUMN user_id INTEGER")
+        print("user_id added successfully")
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e).lower():
+        print("user_id exits，skiping...")
+    else:
+        print(" adding user_id error", e)
+
 
 # create a users table to store the login credentials
 conn = sqlite3.connect('customers.db')
