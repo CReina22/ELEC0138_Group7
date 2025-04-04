@@ -7,7 +7,10 @@ import threading
 import random
 import smtplib
 from email.mime.text import MIMEText
+from flask import make_response
+import secrets
 
+session_tokens = {}
 
 app = Flask(__name__,
             template_folder='../templates', 
@@ -87,11 +90,26 @@ def verify_code():
         user = cursor.fetchone()
         
         if user:
+            user_id = user[0]
+            username = user[1]
+            is_fake = user[-1]
+            
             # Clear the verification code after successful login
             cursor.execute("UPDATE users SET verification_code_login = NULL WHERE email = ?", (email,))
             conn.commit()
-            return jsonify({'success': True, 'message': 'Login successful!'})
+            
+            # generate a session token
+            token = f"{username}_{random.randint(1000,9999)}"
+            session_tokens[token] = {
+                'user_id': user_id,
+                'username': username,
+                'is_fake': is_fake
+            }
 
+            # setting cookie
+            resp = make_response(jsonify({'success': True, 'message': 'Login successful!'}))
+            resp.set_cookie("session_token", token)
+            return resp
         else:
             return jsonify({'success': False, 'message': 'Invalid code or email'}), 401
 
@@ -195,25 +213,39 @@ def login():
 
     if user:
         user_id = user[0]       # id
-        username = user[1]      # username
         is_fake = user[-1]      # is_fake column
 
-        return jsonify({
+        # generate a session token
+        token = f"{username}_{random.randint(1000,9999)}"
+        session_tokens[token] = {
+            'user_id': user_id,
+            'username': username,
+            'is_fake': is_fake
+        }
+
+        # set the session token in the response cookie
+        resp = make_response(jsonify({
             "success": True,
-            "user_id": user_id,
-            "username": username,
-            "is_fake": is_fake
-        })
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+            "message": "Login successful"
+        }))
+        resp.set_cookie("session_token", token)  # not secure, httpOnly, and sameSite attributes can be set here
+        return resp
+    return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 
 # get transaction port
-@app.route('/transactions', methods=['POST'])
+@app.route('/transactions', methods=['GET'])
 def get_transactions():
-    data = request.get_json()
-    user_id = data.get("user_id")
-    is_fake = data.get("is_fake")
+    token = request.cookies.get("session_token")
+
+    # check if the token is valid
+    if not token or token not in session_tokens:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    # get user info from the session token
+    user_info = session_tokens[token]
+    user_id = user_info['user_id']
+    is_fake = user_info['is_fake']
     
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -231,6 +263,18 @@ def get_transactions():
 
     results = [dict(zip(columns, row)) for row in rows]
     return jsonify(results)
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    token = request.cookies.get("session_token")
+
+    if token and token in session_tokens:
+        session_tokens.pop(token)  # delete the session token from the server
+    # clear the session token cookie
+    resp = make_response(jsonify({"success": True, "message": "Logged out"}))
+    resp.set_cookie("session_token", '', expires=0)
+    return resp
 
 
 def open_browser():
