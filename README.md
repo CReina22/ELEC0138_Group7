@@ -9,6 +9,10 @@ In terminal, 'cd backend'
 
              'python app.py'
 
+Use the following command in conda powershell prompt:
+
+             'conda init powershell'
+
 ### ℹ️ Dashboard Behavior
 - If log in with a **testuser account**, you'll see 40 transactions assigned to that user.
 - If log in with a **real account** (registered via email), you'll see the top 100 transactions.
