@@ -7,12 +7,13 @@ import threading
 import random
 import smtplib
 from email.mime.text import MIMEText
-
+from flask_talisman import Talisman  # Import Flask-Talisman
 
 app = Flask(__name__,
             template_folder='../templates', 
             static_folder='../static')     
 
+Talisman(app)
 
 @app.route('/')
 def home():
@@ -215,18 +216,19 @@ def get_transactions():
 
 
 def open_browser():
-    webbrowser.open_new("http://127.0.0.1:5000/")
+    webbrowser.open_new("https://127.0.0.1:5000/")
 
-# launch the server
+# Launch Website
 if __name__ == '__main__':
     if not os.path.exists(DB_FILE):
         print("Error: customers.db not found.")
     else:
-        if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-            threading.Timer(1.5, open_browser).start()
+        #if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        #    threading.Timer(1.5, open_browser).start()
 
         host_ip = '0.0.0.0'  # Listen on all available interfaces
         port = 5000
-        print(f"Backend server is running at http://{host_ip}:{port}")
+        ssl_context = ('../certs/cert.pem', '../certs/key.pem')  # SSL certificates in parent directory
+        print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
-        app.run(debug=True, host=host_ip, port=port)
+        app.run(host=host_ip, port=port, ssl_context=ssl_context)
