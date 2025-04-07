@@ -7,13 +7,80 @@ import threading
 import random
 import smtplib
 from email.mime.text import MIMEText
+<<<<<<< HEAD
 from flask_talisman import Talisman  # Import Flask-Talisman
+=======
+from flask import make_response
+import secrets
+import werkzeug.serving
+import ssl
+import OpenSSL
+
+class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
+        """
+        We subclass this class so that we can gain access to the connection
+        property. self.connection is the underlying client socket. When a TLS
+        connection is established, the underlying socket is an instance of
+        SSLSocket, which in turn exposes the getpeercert() method.
+        The output from that method is what we want to make available elsewhere
+        in the application.
+        """
+        def make_environ(self):
+            """
+            The superclass method develops the environ hash that eventually
+            forms part of the Flask request object.
+            We allow the superclass method to run first, then we insert the
+            peer certificate into the hash. That exposes it to us later in
+            the request variable that Flask provides
+            """
+            environ = super(PeerCertWSGIRequestHandler, self).make_environ()
+            x509_binary = self.connection.getpeercert(True)
+            x509 = OpenSSL.crypto.load_certificate( OpenSSL.crypto.FILETYPE_ASN1, x509_binary )
+            environ['peercert'] = x509
+            return environ
+
+session_tokens = {}
+>>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 app = Flask(__name__,
             template_folder='../templates', 
-            static_folder='../static')     
+            static_folder='../static')   
 
+<<<<<<< HEAD
 Talisman(app)
+=======
+## TLS Start
+
+# # to establish an SSL socket we need the private key and certificate that
+# # we want to serve to users.
+# #
+# # app_key_password here is None, because the key isn't password protected,
+# # but if yours is protected here's where you place it.
+# app_key = '18b0fd92b2464bf73ceb33c55d7cdd62d92a3d25aa580612621adf10701eea7c-private.pem.key'
+# app_key_password = None
+# app_cert = '18b0fd92b2464bf73ceb33c55d7cdd62d92a3d25aa580612621adf10701eea7c-certificate.pem.crt'
+# # in order to verify client certificates we need the certificate of the
+# # CA that issued the client's certificate. In this example I have a
+# # single certificate, but this could also be a bundle file.
+# ca_cert = 'AmazonRootCA1.pem.crt'
+# print(ca_cert)
+# # create_default_context establishes a new SSLContext object that
+# # aligns with the purpose we provide as an argument. Here we provide
+# # Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
+# # of client certificates.
+# ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
+# # load in the certificate and private key for our server to provide to clients.
+# # force the client to provide a certificate.
+# ssl_context.load_cert_chain( certfile=app_cert, keyfile=app_key )
+# ssl_context.verify_mode = ssl.CERT_REQUIRED
+# # now we get into the regular Flask details, except we're passing in the peer certificate
+# # as a variable to the template.
+# @app.route('/')
+# def hello_world():
+#     return render_template('helloworld.html', client_cert=request.environ['peercert'])  
+
+## TLS End
+>>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 @app.route('/')
 def home():
@@ -71,7 +138,6 @@ def send_code():
     send_email(email, code)
     return jsonify(success=True, message="Verification code sent to your email.")
 
-
 @app.route('/verify-code', methods=['POST'])
 def verify_code():
     data = request.get_json()
@@ -88,11 +154,26 @@ def verify_code():
         user = cursor.fetchone()
         
         if user:
+            user_id = user[0]
+            username = user[1]
+            is_fake = user[-1]
+            
             # Clear the verification code after successful login
             cursor.execute("UPDATE users SET verification_code_login = NULL WHERE email = ?", (email,))
             conn.commit()
-            return jsonify({'success': True, 'message': 'Login successful!'})
+            
+            # generate a session token
+            token = f"{username}_{random.randint(1000,9999)}"
+            session_tokens[token] = {
+                'user_id': user_id,
+                'username': username,
+                'is_fake': is_fake
+            }
 
+            # setting cookie
+            resp = make_response(jsonify({'success': True, 'message': 'Login successful!'}))
+            resp.set_cookie("session_token", token)
+            return resp
         else:
             return jsonify({'success': False, 'message': 'Invalid code or email'}), 401
 
@@ -195,18 +276,51 @@ def login():
     conn.close()
 
     if user:
-        return jsonify({"success": True})
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+        user_id = user[0]       # id
+        is_fake = user[-1]      # is_fake column
+
+        # generate a session token
+        token = f"{username}_{random.randint(1000,9999)}"
+        session_tokens[token] = {
+            'user_id': user_id,
+            'username': username,
+            'is_fake': is_fake
+        }
+
+        # set the session token in the response cookie
+        resp = make_response(jsonify({
+            "success": True,
+            "message": "Login successful"
+        }))
+        resp.set_cookie("session_token", token)  # not secure, httpOnly, and sameSite attributes can be set here
+        return resp
+    return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 
 # get transaction port
 @app.route('/transactions', methods=['GET'])
 def get_transactions():
+    token = request.cookies.get("session_token")
+
+    # check if the token is valid
+    if not token or token not in session_tokens:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    # get user info from the session token
+    user_info = session_tokens[token]
+    user_id = user_info['user_id']
+    is_fake = user_info['is_fake']
+    
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM transactions LIMIT 100")
+    if is_fake:
+        # testuser: display assigned transactions
+        cursor.execute("SELECT * FROM transactions WHERE user_id = ?", (user_id,))
+    else:
+        # real users：display first 100 transactions
+        cursor.execute("SELECT * FROM transactions LIMIT 100")
+        
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     conn.close()
@@ -215,8 +329,25 @@ def get_transactions():
     return jsonify(results)
 
 
+@app.route('/logout', methods=['POST'])
+def logout():
+    token = request.cookies.get("session_token")
+
+    if token and token in session_tokens:
+        session_tokens.pop(token)  # delete the session token from the server
+    # clear the session token cookie
+    resp = make_response(jsonify({"success": True, "message": "Logged out"}))
+    resp.set_cookie("session_token", '', expires=0)
+    return resp
+
+
 def open_browser():
+<<<<<<< HEAD
     webbrowser.open_new("https://127.0.0.1:5000/")
+=======
+    webbrowser.open_new("http://127.0.0.1:5000/")
+    # webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
+>>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 # Launch Website
 if __name__ == '__main__':
@@ -231,4 +362,11 @@ if __name__ == '__main__':
         ssl_context = ('../certs/cert.pem', '../certs/key.pem')  # SSL certificates in parent directory
         print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
+<<<<<<< HEAD
         app.run(host=host_ip, port=port, ssl_context=ssl_context)
+=======
+        app.run(debug=True, host=host_ip, port=port)
+        # app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
+        # app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
+
+>>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f

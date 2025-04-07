@@ -29,24 +29,40 @@ function showLogin() {
 
 // load transactions from API
 function loadTransactions() {
-    fetch(`${API_BASE}/transactions`)
-        .then(response => response.json())
-        .then(data => {
-            const tableBody = document.querySelector('#transactions-table tbody');
-            tableBody.innerHTML = ''; // clear existing rows
+    fetch(`${API_BASE}/transactions`,{
+        method: "GET",
+        credentials: "include"  // include cookies in the request
+    })
+    .then(response => {
+        if (response.status === 401) {
+            alert('Session expired or unauthorized. Please login again.');
+            showLogin();
+            return null;
+    }
+    return response.json();
+    })
+    .then(data => {
+        if (!data) return; // no data to display
 
-            data.forEach(txn => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${txn.TransactionID}</td>
-                    <td>${txn.CustomerID}</td>
-                    <td>${txn['TransactionAmount (INR)']}</td>
-                    <td>${txn.TransactionDate || '-'}</td>
+        const tableBody = document.querySelector('#transactions-table tbody');
+        tableBody.innerHTML = ''; // clear existing rows
+
+        data.forEach(txn => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${txn.TransactionID}</td>
+                <td>${txn.CustomerID}</td>
+                <td>${txn['TransactionAmount (INR)']}</td>
+                <td>${txn.TransactionDate || '-'}</td>
+                <td>${txn.CustAccountBalance || '-'}</td>
                 `;
-                tableBody.appendChild(row);
-            });
-        })
-        .catch(error => console.error('Error fetching transactions:', error));
+            tableBody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching transactions:', error);
+        alert('Server error. Please try again later.'); 
+    });
 }
 
 // login button click
@@ -64,15 +80,17 @@ function login() {
         headers: {
             "Content-Type": "application/json"
         },
+        credentials: 'include', // include cookies in the request
         body: JSON.stringify({ username, password })
     })
     .then(res => res.json())
     .then(data => {
         if (data.success) {
             document.getElementById('auth-box').style.display = 'none';
-            loadTransactions(); // load transactions after login
-            document.getElementById('dashboard-section').style.display = 'block';
 
+            loadTransactions(); // load transactions after login
+
+            document.getElementById('dashboard-section').style.display = 'block';
             // change background
             document.body.classList.remove('with-bg');
             document.body.classList.add('no-bg');
@@ -139,13 +157,29 @@ function register() {
 
 
 function logout() {
-    document.getElementById('dashboard-section').style.display = 'none';
-    document.getElementById('auth-box').style.display = 'block';
+    // send logout request to server and clear session
+    fetch('/logout', {
+        method: 'POST',
+        credentials: 'include'  // include cookies in the request
+    })
+    .then(response => response.json())
+    .then(data => { 
+        if (data.success) {
+            console.log('Logout successful');
+        } else {
+            console.warn('Logout failed:', data.message);
+        }
+        document.getElementById('dashboard-section').style.display = 'none';
+        document.getElementById('auth-box').style.display = 'block';
 
-    // change background
-    document.body.classList.remove('no-bg');
-    document.body.classList.add('with-bg');
-    showLogin(); 
+        // change background
+        document.body.classList.remove('no-bg');
+        document.body.classList.add('with-bg');
+        showLogin(); 
+    })
+    .catch(error => {
+        console.error('Error during logout:', error);
+    });
 }
 
 
@@ -198,6 +232,7 @@ function verifyCode() {
     fetch(`${API_BASE}/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // include cookies in the request
         body: JSON.stringify({ email: email, code: code })
     })
     .then(res => res.json())

@@ -29,12 +29,23 @@ df.to_sql('transactions', con=engine, index=False, if_exists='replace')
 
 print(" Data written successfully to customers.db -> table name：transactions")
 
+try:
+    with sqlite3.connect(db_file) as conn_tmp:
+        cursor_tmp = conn_tmp.cursor()
+        cursor_tmp.execute("ALTER TABLE transactions ADD COLUMN user_id INTEGER")
+        print("user_id added successfully")
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e).lower():
+        print("user_id exits，skiping...")
+    else:
+        print(" adding user_id error", e)
+
 
 # create a users table to store the login credentials
 conn = sqlite3.connect('customers.db')
 cursor = conn.cursor()
 
-cursor.execute("DROP TABLE IF EXISTS users")
+#cursor.execute("DROP TABLE IF EXISTS users")
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
@@ -47,6 +58,15 @@ cursor.execute('''
         
     )
 ''')
+
+try:
+    cursor.execute("ALTER TABLE users ADD COLUMN is_fake INTEGER DEFAULT 0")
+    print("is_fake column added to users table")
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e).lower():
+        print("is_fake column already exists, skipping...")
+    else:
+        print("Error adding is_fake column:", e)
 
 # optional: insert a default user
 cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ("admin", "1234"))
