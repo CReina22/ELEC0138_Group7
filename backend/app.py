@@ -42,6 +42,8 @@ app = Flask(__name__,
             template_folder='../templates', 
             static_folder='../static')   
 
+#CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 ## TLS Start
 
@@ -94,8 +96,13 @@ def send_email(to_email, code):
 
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
+            print("Connecting to Gmail SMTP server...")
             server.login('lynzhu12302@gmail.com', 'gzjzqyjhzrnmrwlk')
+            print("Login successful")
             server.send_message(msg)
+            print(f"Email sent successfully to {to_email}")
+    except smtplib.SMTPException as e:
+        print(f"[ERROR] SMTP error: {e}")
     except Exception as e:
         print(f"[ERROR] Failed to send email: {e}")
         
