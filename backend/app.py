@@ -7,9 +7,6 @@ import threading
 import random
 import smtplib
 from email.mime.text import MIMEText
-<<<<<<< HEAD
-from flask_talisman import Talisman  # Import Flask-Talisman
-=======
 from flask import make_response
 import secrets
 import werkzeug.serving
@@ -40,15 +37,12 @@ class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
             return environ
 
 session_tokens = {}
->>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 app = Flask(__name__,
             template_folder='../templates', 
             static_folder='../static')   
 
-<<<<<<< HEAD
-Talisman(app)
-=======
+
 ## TLS Start
 
 # # to establish an SSL socket we need the private key and certificate that
@@ -80,7 +74,6 @@ Talisman(app)
 #     return render_template('helloworld.html', client_cert=request.environ['peercert'])  
 
 ## TLS End
->>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 @app.route('/')
 def home():
@@ -341,13 +334,9 @@ def logout():
     return resp
 
 
-def open_browser():
-<<<<<<< HEAD
-    webbrowser.open_new("https://127.0.0.1:5000/")
-=======
+def open_browser():    
     webbrowser.open_new("http://127.0.0.1:5000/")
     # webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
->>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
 
 # Launch Website
 if __name__ == '__main__':
@@ -359,14 +348,10 @@ if __name__ == '__main__':
 
         host_ip = '0.0.0.0'  # Listen on all available interfaces
         port = 5000
-        ssl_context = ('../certs/cert.pem', '../certs/key.pem')  # SSL certificates in parent directory
         print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
-<<<<<<< HEAD
-        app.run(host=host_ip, port=port, ssl_context=ssl_context)
-=======
-        app.run(debug=True, host=host_ip, port=port)
-        # app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
-        # app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
+        
+        #app.run(debug=True, host=host_ip, port=port)
+        app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
+        #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
 
->>>>>>> 506cb9a42eff59cc0d06e93c714e188d2c79569f
