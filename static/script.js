@@ -1,4 +1,10 @@
-const API_BASE = "http://127.0.0.1:5000";
+//const API_BASE = "http://127.0.0.1:5000";
+
+const urlParams = new URLSearchParams(window.location.search);
+const API_BASE = urlParams.get('apiBase') || window.location.origin;
+console.log('Using API Base:', API_BASE);  // print current API base
+
+
 
 // dislpay login or register section
 function showRegister() {
@@ -14,7 +20,7 @@ function showRegister() {
 
 // display login, ignore register section
 function showLogin() {
-    console.log("[DEBUG] showLogin() 被调用了");
+    console.log("[DEBUG] showLogin() used");
 
     document.getElementById('register-section').style.display = 'none';
     document.getElementById('login-section').style.display = 'block';
