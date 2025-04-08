@@ -335,10 +335,10 @@ def logout():
 
 
 def open_browser():    
-    webbrowser.open_new("http://127.0.0.1:5000/")
-    # webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
+    #webbrowser.open_new("http://127.0.0.1:5000/")
+    webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
 
-# Launch Website
+# Launch Website    
 if __name__ == '__main__':
     if not os.path.exists(DB_FILE):
         print("Error: customers.db not found.")
@@ -350,8 +350,9 @@ if __name__ == '__main__':
         port = 5000
         print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
+        ssl_easy = ('../certs/cert.pem', '../certs/key.pem')
         
         #app.run(debug=True, host=host_ip, port=port)
-        app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
+        app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
         #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
 
