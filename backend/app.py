@@ -13,9 +13,11 @@ import werkzeug.serving
 import ssl
 import OpenSSL
 import hashlib
-from joblib import load
+from joblib import load, dump
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import json
+from sklearn.neighbors import LocalOutlierFactor
 
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
@@ -274,13 +276,11 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    ####################################
     fingerprint = data.get('fingerprint')
-    ####################################
+    fingerprint_data = json.loads(fingerprint)
 
     if not username or not password:
         return jsonify({"success": False, "message": "Username, password."}), 400
-    
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -292,28 +292,72 @@ def login():
         user_id = user[0]
         is_fake = user[-1]
 
+        if FINGERPRINTING == True:
+            # Prepare fingerprint details for comparison and encode features
+            fingerprint_vector = [
+                hash(fingerprint_data.get('browser')),
+                hash(fingerprint_data.get('os')),
+                hash(fingerprint_data.get('screenResolution')),
+                hash(fingerprint_data.get('timezone')),
+                hash(fingerprint_data.get('language')),
+                hash(json.dumps(fingerprint_data.get('plugins'))),
+            ]
 
-        #################################
-        # Check for existing fingerprints
-        cursor.execute("SELECT fingerprint_hash FROM fingerprints WHERE user_id = ?", (user_id,))
-        existing_fingerprints = cursor.fetchall()
+            # Check for existing fingerprints
+            cursor.execute("SELECT browser, os, screen_resolution, \
+                           timezone, language, plugins FROM fingerprints WHERE user_id = ?", 
+                           (user_id,))
+            existing_fingerprints = cursor.fetchall()
 
-        fingerprint_hash = int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8)
+            if existing_fingerprints:
+                # Convert existing fingerprints to encoded vectors for comparison
+                existing_vectors = [
+                    [
+                        hash(fp[0]), hash(fp[1]), hash(fp[2]), hash(fp[3]), hash(fp[4]), hash(fp[5]) 
+                    ] for fp in existing_fingerprints
+                ]
+                x_train = np.array(existing_vectors)
+
+                # Use LocalOutlierFactor model for more than five prints
+                if len(existing_fingerprints) >= 5:
+                    try:
+                        model = LocalOutlierFactor(n_neighbors=20, novelty=True, contamination=0.1)
+                        model.fit(x_train)
+                        print('ML Model')
+
+                        is_anomaly = model.predict([fingerprint_vector]) == -1
+                        if is_anomaly:
+                            print("ML Suspicious Fingerprint Detected")
+                            return jsonify({"success": False, 
+                                            "message": "Suspicious login pattern detected"}), 403
+                        
+                        else: 
+                            print("Fingerprint Verified")
+
+                    except Exception as e:
+                        print(f"Error in anomaly detection: {e}")
+                
         
-        if existing_fingerprints:
-            # Compare the new fingerprint with existing ones
-            existing_hashes = np.array([fp[0] for fp in existing_fingerprints]).reshape(-1, 1)
-            similarity = cosine_similarity([[fingerprint_hash]], existing_hashes) 
-            print("Existing Fingerprint Detected")
+            
 
-            if np.max(similarity) < 0.5:  # Threshold for suspicious fingerprint
-                return jsonify({"success": False, "message": "Suspicious fingerprint detected."}), 403
-        else:
-            # Add the new fingerprint to the database
-            print("Fingerprint Added")
-            cursor.execute("INSERT INTO fingerprints (user_id, fingerprint_hash) VALUES (?, ?)", (user_id, fingerprint_hash))
+            # Store fingerprint for this login when successful, store additional metrics for future use
+            cursor.execute('''
+                INSERT INTO fingerprints (
+                user_id, fingerprint_hash, browser, os, screen_resolution, timezone, language, 
+                color_depth, pixel_ratio, cookies_enabled, do_not_track, plugins, cpu_cores, 
+                connection_type, canvas_hash, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (
+                user_id, int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8),
+                fingerprint_data.get('browser'), fingerprint_data.get('os'),
+                fingerprint_data.get('screenResolution'), fingerprint_data.get('timezone'),
+                fingerprint_data.get('language'), fingerprint_data.get('colorDepth'),
+                fingerprint_data.get('pixelRatio'), fingerprint_data.get('cookiesEnabled'),
+                fingerprint_data.get('doNotTrack'), json.dumps(fingerprint_data.get('plugins')),
+                fingerprint_data.get('cpuCores'), fingerprint_data.get('connectionType'),
+                fingerprint_data.get('canvasHash')
+            ))
             conn.commit()
-        #################################
 
         # Generate a session token
         token = f"{username}_{random.randint(1000,9999)}"
@@ -397,6 +441,9 @@ if __name__ == '__main__':
         print(f"Access from another device using your computer's IP address and port {port}")
         ssl_easy = ('../certs/cert.pem', '../certs/key.pem')
         
+        #To enable the use of fingerprinting authentication change this variable to True
+        FINGERPRINTING = True 
+
         #app.run(debug=True, host=host_ip, port=port)
         app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
         #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication

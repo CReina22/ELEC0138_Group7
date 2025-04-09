@@ -78,12 +78,25 @@ print("users table created！")
 conn = sqlite3.connect('customers.db')
 cursor = conn.cursor()
 
-# Ensure the fingerprints table is ready to store required data
+
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS fingerprints (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         fingerprint_hash INTEGER NOT NULL,
+        browser TEXT,
+        os TEXT,
+        screen_resolution TEXT,
+        timezone TEXT,
+        language TEXT,
+        color_depth INTEGER,
+        pixel_ratio REAL,
+        cookies_enabled BOOLEAN,
+        do_not_track TEXT,
+        plugins TEXT,
+        cpu_cores TEXT,
+        connection_type TEXT,
+        canvas_hash TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id),
         UNIQUE(user_id, fingerprint_hash)
@@ -92,4 +105,4 @@ cursor.execute('''
 
 conn.commit()
 conn.close()
-print("fingerprints table created!")
+print("fingerprints table updated to store full login information!")

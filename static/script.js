@@ -73,11 +73,52 @@ function loadTransactions() {
 // Collect fingerprint data
 function collectFingerprint() {
     return {
+        // Basic information
         browser: navigator.userAgent,
         os: navigator.platform,
         screenResolution: `${window.screen.width}x${window.screen.height}`,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language
+        language: navigator.language,
+        
+        // Additional screen properties
+        colorDepth: window.screen.colorDepth,
+        pixelRatio: window.devicePixelRatio,
+        
+        // Browser capabilities
+        cookiesEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack,
+        
+        // Browser plugins and MIME types
+        plugins: Array.from(navigator.plugins).map(p => ({
+            name: p.name,
+            description: p.description
+        })),
+        
+        // Hardware info
+        cpuCores: navigator.hardwareConcurrency || 'unknown',
+        
+        // Connection info
+        connectionType: navigator.connection ? 
+            navigator.connection.effectiveType : 'unknown',
+            
+        // Date/Time for request timing
+        timestamp: new Date().toString(),
+        
+        // Canvas fingerprinting (creates a hash based on how the browser renders)
+        canvasHash: (() => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 200;
+                canvas.height = 50;
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Fingerprint', 0, 0);
+                return canvas.toDataURL().slice(0, 100);
+            } catch (e) {
+                return 'canvas-unsupported';
+            }
+        })()
     };
 }
 
@@ -98,7 +139,7 @@ function login() {
             "Content-Type": "application/json"
         },
         credentials: 'include', // include cookies in the request
-        body: JSON.stringify({ username, password, fingerprint })
+        body: JSON.stringify({ username, password, fingerprint }) // Send full fingerprint data
     })
     .then(res => res.json())
     .then(data => {
