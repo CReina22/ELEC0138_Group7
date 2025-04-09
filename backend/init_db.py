@@ -74,3 +74,22 @@ cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)",
 conn.commit()
 conn.close()
 print("users table created！")
+# Create a fingerprints table to store user fingerprint data
+conn = sqlite3.connect('customers.db')
+cursor = conn.cursor()
+
+# Ensure the fingerprints table is ready to store required data
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS fingerprints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        fingerprint_hash INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, fingerprint_hash)
+    )
+''')
+
+conn.commit()
+conn.close()
+print("fingerprints table created!")

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, request
+from flask import Flask, request, jsonify, render_template, request, session
 from flask_cors import CORS
 import sqlite3
 import os
@@ -12,6 +12,11 @@ import secrets
 import werkzeug.serving
 import ssl
 import OpenSSL
+import hashlib
+from joblib import load
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
         """
@@ -82,6 +87,7 @@ def home():
     return render_template('index.html')
 
 
+#DB_FILE = 'customers.db'
 DB_FILE = 'customers.db'
 
 def generate_code():
@@ -268,18 +274,48 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
+    ####################################
+    fingerprint = data.get('fingerprint')
+    ####################################
+
+    if not username or not password:
+        return jsonify({"success": False, "message": "Username, password."}), 400
+    
+
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
     user = cursor.fetchone()
-    conn.close()
 
     if user:
-        user_id = user[0]       # id
-        is_fake = user[-1]      # is_fake column
+        user_id = user[0]
+        is_fake = user[-1]
 
-        # generate a session token
+
+        #################################
+        # Check for existing fingerprints
+        cursor.execute("SELECT fingerprint_hash FROM fingerprints WHERE user_id = ?", (user_id,))
+        existing_fingerprints = cursor.fetchall()
+
+        fingerprint_hash = int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8)
+        
+        if existing_fingerprints:
+            # Compare the new fingerprint with existing ones
+            existing_hashes = np.array([fp[0] for fp in existing_fingerprints]).reshape(-1, 1)
+            similarity = cosine_similarity([[fingerprint_hash]], existing_hashes) 
+            print("Existing Fingerprint Detected")
+
+            if np.max(similarity) < 0.5:  # Threshold for suspicious fingerprint
+                return jsonify({"success": False, "message": "Suspicious fingerprint detected."}), 403
+        else:
+            # Add the new fingerprint to the database
+            print("Fingerprint Added")
+            cursor.execute("INSERT INTO fingerprints (user_id, fingerprint_hash) VALUES (?, ?)", (user_id, fingerprint_hash))
+            conn.commit()
+        #################################
+
+        # Generate a session token
         token = f"{username}_{random.randint(1000,9999)}"
         session_tokens[token] = {
             'user_id': user_id,
@@ -287,13 +323,15 @@ def login():
             'is_fake': is_fake
         }
 
-        # set the session token in the response cookie
+        # Set the session token in the response cookie
         resp = make_response(jsonify({
             "success": True,
             "message": "Login successful"
         }))
-        resp.set_cookie("session_token", token)  # not secure, httpOnly, and sameSite attributes can be set here
+        resp.set_cookie("session_token", token)
         return resp
+
+    conn.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 

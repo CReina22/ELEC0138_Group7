@@ -5,7 +5,6 @@ const API_BASE = urlParams.get('apiBase') || window.location.origin;
 console.log('Using API Base:', API_BASE);  // print current API base
 
 
-
 // dislpay login or register section
 function showRegister() {
     document.getElementById('login-section').style.display = 'none';
@@ -71,11 +70,23 @@ function loadTransactions() {
     });
 }
 
+// Collect fingerprint data
+function collectFingerprint() {
+    return {
+        browser: navigator.userAgent,
+        os: navigator.platform,
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language
+    };
+}
+
 // login button click
 function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    
+    const fingerprint = JSON.stringify(collectFingerprint());
+
     if (!username || !password) {
         alert("Please enter username and password.");
         return;
@@ -87,7 +98,7 @@ function login() {
             "Content-Type": "application/json"
         },
         credentials: 'include', // include cookies in the request
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, fingerprint })
     })
     .then(res => res.json())
     .then(data => {

@@ -1,18 +1,17 @@
-# Train and save the anomaly detection model
-from sklearn.ensemble import IsolationForest
 import pandas as pd
+from sklearn.ensemble import IsolationForest
+import sqlite3
 import joblib
 
-# Example dataset with features like IP, user agent, and login time
-data = pd.DataFrame({
-    'ip_address': [12345, 67890, 12345, 67890],
-    'user_agent': [1, 2, 1, 3],
-    'login_time': [10, 20, 15, 25]
-})
 
-# Train the Isolation Forest model
-model = IsolationForest(contamination=0.1, random_state=42)
-model.fit(data)
 
-# Save the model to a file
-joblib.dump(model, 'anomaly_detection_model.pkl')
+# Add a method to check fingerprint similarity
+def check_fingerprint_similarity(new_fingerprint_hash, existing_hashes):
+    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
+
+    new_hash_array = np.array([new_fingerprint_hash]).reshape(1, -1)
+    existing_hash_array = np.array(existing_hashes).reshape(-1, 1)
+
+    similarity_scores = cosine_similarity(new_hash_array, existing_hash_array)
+    return similarity_scores.max()
