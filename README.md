@@ -23,8 +23,5 @@ To enable this feature ensure the variable FINGERPRINTING is set to true in app.
 
 Then log in across multiple devices that are commonly used with one holdout. 
 
-The first 5 logins do not perform anomaly detection to build a profile of the user. After this the ML model will look for anomalies in the sign in and reject anomalous ones. There is currently no mechanism such as 
-a OTP to allow the user to login once classed as an anomaly on device.
-
-To clear the existing fingerprints of the account run in the terminal:
-                'python fingerprint_clear.py'
+The first 5 logins do not perform anomaly detection to build a profile of the user. After this the ML model will look for anomalies in the sign in and reject anomalous ones. 
+When a anomaly is identified it will send an one-time-passcode to the registered email (check junk). This approves the current browser allowning the user to log in again.

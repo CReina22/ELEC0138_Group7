@@ -319,7 +319,7 @@ def login():
                 x_train = np.array(existing_vectors)
 
                 # Use LocalOutlierFactor model for more than five prints
-                if len(existing_fingerprints) >= 5:
+                if len(existing_fingerprints) > 5:
                     try:
                         model = LocalOutlierFactor(n_neighbors=20, novelty=True, contamination=0.1)
                         model.fit(x_train)
@@ -328,8 +328,19 @@ def login():
                         is_anomaly = model.predict([fingerprint_vector]) == -1
                         if is_anomaly:
                             print("ML Suspicious Fingerprint Detected")
-                            return jsonify({"success": False, 
-                                            "message": "Suspicious login pattern detected"}), 403
+                            
+                            # Generate and send OTP
+                            otp = generate_code()
+                            cursor.execute("UPDATE users SET otp = ? WHERE email = ?", (otp, user[3])) 
+                            conn.commit()
+                            send_email(user[3], otp)
+                            
+                            return jsonify({
+                                "success": False,
+                                "message": "Suspicious login pattern detected. OTP sent to your email.",
+                                "requires_otp": True,
+                                "email": user[3]
+                            }), 403
                         
                         else: 
                             print("Fingerprint Verified")
@@ -421,6 +432,61 @@ def logout():
     resp = make_response(jsonify({"success": True, "message": "Logged out"}))
     resp.set_cookie("session_token", '', expires=0)
     return resp
+
+
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    fingerprint = data.get('fingerprint')  # Get fingerprint data from the request
+
+    if not email or not otp:
+        return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM users WHERE email = ? AND otp = ?", (email, otp))
+    user = cursor.fetchone()
+
+    if user:
+        # Clear the OTP after successful verification
+        cursor.execute("UPDATE users SET otp = NULL WHERE email = ?", (email,))
+        conn.commit()
+
+        # Save the fingerprint to the database
+        if fingerprint:
+            try:
+                fingerprint_data = json.loads(fingerprint)
+                user_id = user[0]  # Get user_id from the found user
+
+                cursor.execute('''
+                    INSERT INTO fingerprints (
+                    user_id, fingerprint_hash, browser, os, screen_resolution, timezone, language, 
+                    color_depth, pixel_ratio, cookies_enabled, do_not_track, plugins, cpu_cores, 
+                    connection_type, canvas_hash, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ''', (
+                    user_id, int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8),
+                    fingerprint_data.get('browser'), fingerprint_data.get('os'),
+                    fingerprint_data.get('screenResolution'), fingerprint_data.get('timezone'),
+                    fingerprint_data.get('language'), fingerprint_data.get('colorDepth'),
+                    fingerprint_data.get('pixelRatio'), fingerprint_data.get('cookiesEnabled'),
+                    fingerprint_data.get('doNotTrack'), json.dumps(fingerprint_data.get('plugins')),
+                    fingerprint_data.get('cpuCores'), fingerprint_data.get('connectionType'),
+                    fingerprint_data.get('canvasHash')
+                ))
+                conn.commit()
+            except Exception as e:
+                print(f"[Error] Failed to save fingerprint: {e}")
+                return jsonify({'success': False, 'message': 'Failed to save fingerprint'}), 500
+
+        conn.close()
+        return jsonify({'success': True, 'message': 'OTP verified successfully. Please log in again.'})
+    else:
+        conn.close()
+        return jsonify({'success': False, 'message': 'Invalid OTP'}), 401
 
 
 def open_browser():    
