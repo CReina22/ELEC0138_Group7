@@ -16,3 +16,12 @@ Use the following command in conda powershell prompt:
 ### ℹ️ Dashboard Behavior
 - If log in with a **testuser account**, you'll see 40 transactions assigned to that user.
 - If log in with a **real account** (registered via email), you'll see the top 100 transactions.
+
+
+### Anomaly Detection by Fingerprinting
+To enable this feature ensure the variable FINGERPRINTING is set to true in app.py. 
+
+Then log in across multiple devices that are commonly used with one holdout. 
+
+The first 5 logins do not perform anomaly detection to build a profile of the user. After this the ML model will look for anomalies in the sign in and reject anomalous ones. 
+When a anomaly is identified it will send an one-time-passcode to the registered email (check junk). This approves the current browser allowning the user to log in again.
