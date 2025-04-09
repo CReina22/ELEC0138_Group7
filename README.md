@@ -23,5 +23,7 @@ To enable this feature ensure the variable FINGERPRINTING is set to true in app.
 
 Then log in across multiple devices that are commonly used with one holdout. 
 
-The first 5 logins do not perform anomaly detection to build a profile of the user. After this the ML model will look for anomalies in the sign in and reject anomalous ones. 
-When a anomaly is identified it will send an one-time-passcode to the registered email (check junk). This approves the current browser allowning the user to log in again.
+The first 5 logins do not perform anomaly detection to build a profile of the user. After this, the ML model will look for anomalies in the sign in and reject anomalous ones. 
+When an anomaly is identified it will send a one-time passcode to the registered email (check junk). This approves the current browser allowing the user to log in again.
+
+To view the experimentation of the model along with testing implementation navigate to the Fingerprint Anomaly Detection directory.
