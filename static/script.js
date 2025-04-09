@@ -5,7 +5,6 @@ const API_BASE = urlParams.get('apiBase') || window.location.origin;
 console.log('Using API Base:', API_BASE);  // print current API base
 
 
-
 // dislpay login or register section
 function showRegister() {
     document.getElementById('login-section').style.display = 'none';
@@ -71,11 +70,64 @@ function loadTransactions() {
     });
 }
 
+// Collect fingerprint data
+function collectFingerprint() {
+    return {
+        // Basic information
+        browser: navigator.userAgent,
+        os: navigator.platform,
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        
+        // Additional screen properties
+        colorDepth: window.screen.colorDepth,
+        pixelRatio: window.devicePixelRatio,
+        
+        // Browser capabilities
+        cookiesEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack,
+        
+        // Browser plugins and MIME types
+        plugins: Array.from(navigator.plugins).map(p => ({
+            name: p.name,
+            description: p.description
+        })),
+        
+        // Hardware info
+        cpuCores: navigator.hardwareConcurrency || 'unknown',
+        
+        // Connection info
+        connectionType: navigator.connection ? 
+            navigator.connection.effectiveType : 'unknown',
+            
+        // Date/Time for request timing
+        timestamp: new Date().toString(),
+        
+        // Canvas fingerprinting (creates a hash based on how the browser renders)
+        canvasHash: (() => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 200;
+                canvas.height = 50;
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Fingerprint', 0, 0);
+                return canvas.toDataURL().slice(0, 100);
+            } catch (e) {
+                return 'canvas-unsupported';
+            }
+        })()
+    };
+}
+
 // login button click
 function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    
+    const fingerprint = JSON.stringify(collectFingerprint());
+
     if (!username || !password) {
         alert("Please enter username and password.");
         return;
@@ -87,7 +139,7 @@ function login() {
             "Content-Type": "application/json"
         },
         credentials: 'include', // include cookies in the request
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, fingerprint }) 
     })
     .then(res => res.json())
     .then(data => {
@@ -103,18 +155,26 @@ function login() {
 
             document.getElementById('user-display').innerText = username;
         
+        } else if (data.requires_otp) {
+            showOtpPopup(data.email);
         } else {
             alert(data.message || "Login failed");
         }
     })
     .catch(err => {
+        // Log detailed error information
+        console.error("Login error details:", {
+            error: err,
+            message: err.message,
+            stack: err.stack,
+            url: `${API_BASE}/login`,
+            requestData: { username, password: "REDACTED", fingerprint: "REDACTED" }
+        });
         console.error("Login error:", err);
         alert("Server error during login");
     });
 
 }
-
-
 
 // register button click
 function register() {
@@ -159,9 +219,6 @@ function register() {
     });
 }
 
-
-
-
 function logout() {
     // send logout request to server and clear session
     fetch('/logout', {
@@ -187,7 +244,6 @@ function logout() {
         console.error('Error during logout:', error);
     });
 }
-
 
 // email login button click
 function showEmailLogin() {
@@ -286,6 +342,45 @@ function sendRegisterCode(){
     .catch(err => {
         console.error("Send code error:", err);
         alert("Server error while sending code.");
+    });
+}
+
+// Show OTP popup
+function showOtpPopup(email) {
+    const otpPopup = document.getElementById('otp-popup');
+    otpPopup.style.display = 'flex'; // Ensure the pop-up is displayed as a flex container
+    document.getElementById('otp-email').value = email;
+}
+
+// Verify OTP
+function verifyOtp() {
+    const email = document.getElementById('otp-email').value.trim();
+    const otp = document.getElementById('otp-input').value.trim();
+    const fingerprint = JSON.stringify(collectFingerprint()); // Collect fingerprint data
+
+    if (!email || !otp) {
+        alert("Please enter the OTP.");
+        return;
+    }
+
+    fetch(`${API_BASE}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp, fingerprint }) // Send fingerprint data
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message); // Notify the user
+            document.getElementById('otp-popup').style.display = 'none';
+            showLogin(); // Redirect to the login page
+        } else {
+            alert(data.message || "Invalid OTP.");
+        }
+    })
+    .catch(err => {
+        console.error("OTP verification error:", err);
+        alert("Server error during OTP verification.");
     });
 }
 

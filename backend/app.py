@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, request
+from flask import Flask, request, jsonify, render_template, request, session
 from flask_cors import CORS
 import sqlite3
 import os
@@ -12,6 +12,13 @@ import secrets
 import werkzeug.serving
 import ssl
 import OpenSSL
+import hashlib
+from joblib import load, dump
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+import json
+from sklearn.neighbors import LocalOutlierFactor
+
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
         """
@@ -82,6 +89,7 @@ def home():
     return render_template('index.html')
 
 
+#DB_FILE = 'customers.db'
 DB_FILE = 'customers.db'
 
 def generate_code():
@@ -268,18 +276,101 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
+    fingerprint = data.get('fingerprint')
+    fingerprint_data = json.loads(fingerprint)
+
+    if not username or not password:
+        return jsonify({"success": False, "message": "Username, password."}), 400
+
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
     user = cursor.fetchone()
-    conn.close()
 
     if user:
-        user_id = user[0]       # id
-        is_fake = user[-1]      # is_fake column
+        user_id = user[0]
+        is_fake = user[-1]
 
-        # generate a session token
+        if FINGERPRINTING == True:
+            # Prepare fingerprint details for comparison and encode features
+            fingerprint_vector = [
+                hash(fingerprint_data.get('browser')),
+                hash(fingerprint_data.get('os')),
+                hash(fingerprint_data.get('screenResolution')),
+                hash(fingerprint_data.get('timezone')),
+                hash(fingerprint_data.get('language')),
+                hash(json.dumps(fingerprint_data.get('plugins'))),
+            ]
+
+            # Check for existing fingerprints
+            cursor.execute("SELECT browser, os, screen_resolution, \
+                           timezone, language, plugins FROM fingerprints WHERE user_id = ?", 
+                           (user_id,))
+            existing_fingerprints = cursor.fetchall()
+
+            if existing_fingerprints:
+                # Convert existing fingerprints to encoded vectors for comparison
+                existing_vectors = [
+                    [
+                        hash(fp[0]), hash(fp[1]), hash(fp[2]), hash(fp[3]), hash(fp[4]), hash(fp[5]) 
+                    ] for fp in existing_fingerprints
+                ]
+                x_train = np.array(existing_vectors)
+
+                # Use LocalOutlierFactor model for more than five prints
+                if len(existing_fingerprints) > 5:
+                    try:
+                        model = LocalOutlierFactor(n_neighbors=20, novelty=True, contamination=0.1)
+                        model.fit(x_train)
+                        print('ML Model')
+
+                        is_anomaly = model.predict([fingerprint_vector]) == -1
+                        if is_anomaly:
+                            print("ML Suspicious Fingerprint Detected")
+                            
+                            # Generate and send OTP
+                            otp = generate_code()
+                            cursor.execute("UPDATE users SET otp = ? WHERE email = ?", (otp, user[3])) 
+                            conn.commit()
+                            send_email(user[3], otp)
+                            
+                            return jsonify({
+                                "success": False,
+                                "message": "Suspicious login pattern detected. OTP sent to your email.",
+                                "requires_otp": True,
+                                "email": user[3]
+                            }), 403
+                        
+                        else: 
+                            print("Fingerprint Verified")
+
+                    except Exception as e:
+                        print(f"Error in anomaly detection: {e}")
+                
+        
+            
+
+            # Store fingerprint for this login when successful, store additional metrics for future use
+            cursor.execute('''
+                INSERT INTO fingerprints (
+                user_id, fingerprint_hash, browser, os, screen_resolution, timezone, language, 
+                color_depth, pixel_ratio, cookies_enabled, do_not_track, plugins, cpu_cores, 
+                connection_type, canvas_hash, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (
+                user_id, int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8),
+                fingerprint_data.get('browser'), fingerprint_data.get('os'),
+                fingerprint_data.get('screenResolution'), fingerprint_data.get('timezone'),
+                fingerprint_data.get('language'), fingerprint_data.get('colorDepth'),
+                fingerprint_data.get('pixelRatio'), fingerprint_data.get('cookiesEnabled'),
+                fingerprint_data.get('doNotTrack'), json.dumps(fingerprint_data.get('plugins')),
+                fingerprint_data.get('cpuCores'), fingerprint_data.get('connectionType'),
+                fingerprint_data.get('canvasHash')
+            ))
+            conn.commit()
+
+        # Generate a session token
         token = f"{username}_{random.randint(1000,9999)}"
         session_tokens[token] = {
             'user_id': user_id,
@@ -287,13 +378,15 @@ def login():
             'is_fake': is_fake
         }
 
-        # set the session token in the response cookie
+        # Set the session token in the response cookie
         resp = make_response(jsonify({
             "success": True,
             "message": "Login successful"
         }))
-        resp.set_cookie("session_token", token)  # not secure, httpOnly, and sameSite attributes can be set here
+        resp.set_cookie("session_token", token)
         return resp
+
+    conn.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 
@@ -341,6 +434,61 @@ def logout():
     return resp
 
 
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    fingerprint = data.get('fingerprint')  # Get fingerprint data from the request
+
+    if not email or not otp:
+        return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM users WHERE email = ? AND otp = ?", (email, otp))
+    user = cursor.fetchone()
+
+    if user:
+        # Clear the OTP after successful verification
+        cursor.execute("UPDATE users SET otp = NULL WHERE email = ?", (email,))
+        conn.commit()
+
+        # Save the fingerprint to the database
+        if fingerprint:
+            try:
+                fingerprint_data = json.loads(fingerprint)
+                user_id = user[0]  # Get user_id from the found user
+
+                cursor.execute('''
+                    INSERT INTO fingerprints (
+                    user_id, fingerprint_hash, browser, os, screen_resolution, timezone, language, 
+                    color_depth, pixel_ratio, cookies_enabled, do_not_track, plugins, cpu_cores, 
+                    connection_type, canvas_hash, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ''', (
+                    user_id, int(hashlib.sha256(fingerprint.encode()).hexdigest(), 16) % (10 ** 8),
+                    fingerprint_data.get('browser'), fingerprint_data.get('os'),
+                    fingerprint_data.get('screenResolution'), fingerprint_data.get('timezone'),
+                    fingerprint_data.get('language'), fingerprint_data.get('colorDepth'),
+                    fingerprint_data.get('pixelRatio'), fingerprint_data.get('cookiesEnabled'),
+                    fingerprint_data.get('doNotTrack'), json.dumps(fingerprint_data.get('plugins')),
+                    fingerprint_data.get('cpuCores'), fingerprint_data.get('connectionType'),
+                    fingerprint_data.get('canvasHash')
+                ))
+                conn.commit()
+            except Exception as e:
+                print(f"[Error] Failed to save fingerprint: {e}")
+                return jsonify({'success': False, 'message': 'Failed to save fingerprint'}), 500
+
+        conn.close()
+        return jsonify({'success': True, 'message': 'OTP verified successfully. Please log in again.'})
+    else:
+        conn.close()
+        return jsonify({'success': False, 'message': 'Invalid OTP'}), 401
+
+
 def open_browser():    
     #webbrowser.open_new("http://127.0.0.1:5000/")
     webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
@@ -359,6 +507,9 @@ if __name__ == '__main__':
         print(f"Access from another device using your computer's IP address and port {port}")
         ssl_easy = ('../certs/cert.pem', '../certs/key.pem')
         
+        #To enable the use of fingerprinting authentication change this variable to True
+        FINGERPRINTING = True 
+
         #app.run(debug=True, host=host_ip, port=port)
         app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
         #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication

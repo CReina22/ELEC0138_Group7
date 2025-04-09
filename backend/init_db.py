@@ -68,9 +68,50 @@ except sqlite3.OperationalError as e:
     else:
         print("Error adding is_fake column:", e)
 
+try:
+    cursor.execute("ALTER TABLE users ADD COLUMN otp TEXT")
+    print("otp added to users table")
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e).lower():
+        print("otp column already exists, skipping...")
+    else:
+        print("Error adding is_fake column:", e)
+
 # optional: insert a default user
 cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ("admin", "1234"))
 
 conn.commit()
 conn.close()
 print("users table created！")
+# Create a fingerprints table to store user fingerprint data
+conn = sqlite3.connect('customers.db')
+cursor = conn.cursor()
+
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS fingerprints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        fingerprint_hash INTEGER NOT NULL,
+        browser TEXT,
+        os TEXT,
+        screen_resolution TEXT,
+        timezone TEXT,
+        language TEXT,
+        color_depth INTEGER,
+        pixel_ratio REAL,
+        cookies_enabled BOOLEAN,
+        do_not_track TEXT,
+        plugins TEXT,
+        cpu_cores TEXT,
+        connection_type TEXT,
+        canvas_hash TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, fingerprint_hash)
+    )
+''')
+
+conn.commit()
+conn.close()
+print("fingerprints table updated to store full login information!")

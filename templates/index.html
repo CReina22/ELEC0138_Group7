@@ -63,6 +63,16 @@
                     <a href="#" onclick="showLogin()">Login with Username</a>
                     </p>
                 </div>
+
+                <!-- OTP Pop-up -->
+                <div id="otp-popup" class="otp-popup" style="display: none;">
+                    <div class="otp-popup-content">
+                        <h3 class="text-center">Enter OTP</h3>
+                        <input type="hidden" id="otp-email" />
+                        <input type="text" id="otp-input" class="form-control mb-2" placeholder="Enter OTP">
+                        <button class="btn btn-primary w-100" onclick="verifyOtp()">Verify</button>
+                    </div>
+                </div>
             </div>
 
 
