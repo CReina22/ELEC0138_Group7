@@ -276,8 +276,14 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
+    ###########################################################
+    #                    Anomaly Detection                    #
+    ###########################################################
     fingerprint = data.get('fingerprint')
     fingerprint_data = json.loads(fingerprint)
+    ###########################################################
+    ###########################################################
+    
 
     if not username or not password:
         return jsonify({"success": False, "message": "Username, password."}), 400
@@ -288,6 +294,10 @@ def login():
     cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
     user = cursor.fetchone()
 
+
+    ###########################################################
+    #                    Anomaly Detection                    #
+    ###########################################################
     if user:
         user_id = user[0]
         is_fake = user[-1]
@@ -369,6 +379,10 @@ def login():
                 fingerprint_data.get('canvasHash')
             ))
             conn.commit()
+        ###########################################################
+        ###########################################################
+
+
 
         # Generate a session token
         token = f"{username}_{random.randint(1000,9999)}"
@@ -434,6 +448,9 @@ def logout():
     return resp
 
 
+###########################################################
+#                    Anomaly Detection                    #
+###########################################################
 @app.route('/verify-otp', methods=['POST'])
 def verify_otp():
     data = request.get_json()
@@ -487,7 +504,8 @@ def verify_otp():
     else:
         conn.close()
         return jsonify({'success': False, 'message': 'Invalid OTP'}), 401
-
+###########################################################
+###########################################################
 
 def open_browser():    
     #webbrowser.open_new("http://127.0.0.1:5000/")

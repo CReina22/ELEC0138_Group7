@@ -70,7 +70,10 @@ function loadTransactions() {
     });
 }
 
-// Collect fingerprint data
+
+///////////////////////////////////////////////////////////
+//                 Anomaly Detection                     //
+///////////////////////////////////////////////////////////
 function collectFingerprint() {
     return {
         // Basic information
@@ -121,12 +124,15 @@ function collectFingerprint() {
         })()
     };
 }
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
 
 // login button click
 function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    const fingerprint = JSON.stringify(collectFingerprint());
+    const fingerprint = JSON.stringify(collectFingerprint()); // Used for Anomaly Detection
 
     if (!username || !password) {
         alert("Please enter username and password.");
@@ -155,8 +161,8 @@ function login() {
 
             document.getElementById('user-display').innerText = username;
         
-        } else if (data.requires_otp) {
-            showOtpPopup(data.email);
+        } else if (data.requires_otp) { // Used for Anomaly Detection
+            showOtpPopup(data.email);   
         } else {
             alert(data.message || "Login failed");
         }
@@ -345,6 +351,12 @@ function sendRegisterCode(){
     });
 }
 
+
+
+///////////////////////////////////////////////////////////
+//                 Anomaly Detection                     //
+///////////////////////////////////////////////////////////
+
 // Show OTP popup
 function showOtpPopup(email) {
     const otpPopup = document.getElementById('otp-popup');
@@ -383,4 +395,7 @@ function verifyOtp() {
         alert("Server error during OTP verification.");
     });
 }
+
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
 
