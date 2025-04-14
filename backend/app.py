@@ -136,7 +136,7 @@ def send_code():
 
     if not user:
         conn.close()
-        return jsonify(success=False, message="Email not registered"), 404
+        return jsonify(success=False, message="Email not registered"), 
 
     # update the verification code in the database
     cursor.execute("UPDATE users SET verification_code_login = ? WHERE email = ?", (code, email))
@@ -283,7 +283,7 @@ def login():
     fingerprint_data = json.loads(fingerprint)
     ###########################################################
     ###########################################################
-    
+
 
     if not username or not password:
         return jsonify({"success": False, "message": "Username, password."}), 400
@@ -379,8 +379,8 @@ def login():
                 fingerprint_data.get('canvasHash')
             ))
             conn.commit()
-        ###########################################################
-        ###########################################################
+    ###########################################################
+    ###########################################################
 
 
 
@@ -526,8 +526,7 @@ if __name__ == '__main__':
         ssl_easy = ('../certs/cert.pem', '../certs/key.pem')
         
         #To enable the use of fingerprinting authentication change this variable to True
-        FINGERPRINTING = True 
-
+        FINGERPRINTING = True
         #app.run(debug=True, host=host_ip, port=port)
         app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
         #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication

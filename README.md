@@ -18,6 +18,15 @@ Use the following command in conda powershell prompt:
 - If log in with a **real account** (registered via email), you'll see the top 100 transactions.
 
 
+
+### PHP Captive Portal
+To view the captive portal ensure PHP is installed onto your device and then navigate to the CaptivePortal directory. Form here run the following in the terminal:
+
+                'php -S 127.0.0.1:8000'
+
+### Password Cracker
+To use the password cracker navigate to the PasswordCracker directory and add the email address of the target. Then fill out the passwords.txt with the passwords to use. Then run main.py in the terminal.
+
 ### Anomaly Detection by Fingerprinting
 To enable this feature ensure the variable FINGERPRINTING is set to true in app.py. 
 
