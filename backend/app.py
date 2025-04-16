@@ -18,6 +18,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import json
 from sklearn.neighbors import LocalOutlierFactor
+import requests
 
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
@@ -275,6 +276,27 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    
+    ########################################################################################
+    #######################    hCaptcha part below  ########################################
+    captcha_token = data.get('h-captcha-response')
+
+    if not captcha_token:
+        return jsonify({"success": False, "message": "Captcha missing"}), 400
+
+    verify_url = "https://hcaptcha.com/siteverify"
+    secret = "ES_edd7d9a86ef242da945b0b7e9065848e" 
+
+    captcha_result = requests.post(verify_url, data={
+        'secret': secret,
+        'response': captcha_token
+    }).json()
+
+    if not captcha_result.get("success"):
+        return jsonify({"success": False, "message": "Captcha verification failed"}), 403
+    ################################## hCaptcha part above #####################################
+    ############################################################################################
+
 
     ###########################################################
     #                    Anomaly Detection                    #
@@ -315,8 +337,8 @@ def login():
 
             # Check for existing fingerprints
             cursor.execute("SELECT browser, os, screen_resolution, \
-                           timezone, language, plugins FROM fingerprints WHERE user_id = ?", 
-                           (user_id,))
+                            timezone, language, plugins FROM fingerprints WHERE user_id = ?", 
+                            (user_id,))
             existing_fingerprints = cursor.fetchall()
 
             if existing_fingerprints:
