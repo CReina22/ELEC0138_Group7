@@ -139,13 +139,22 @@ function login() {
         return;
     }
 
+    ///////////////////////// Get hCaptcha response token /////////////////////////
+    const captchaToken = document.querySelector('[name="h-captcha-response"]')?.value;
+    if (!captchaToken) {
+        alert("Please complete the CAPTCHA.");
+        return;
+    }
+    //////////////////////////////////////////////////////////////////////////////
+
     fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
         credentials: 'include', // include cookies in the request
-        body: JSON.stringify({ username, password, fingerprint }) 
+        
+        body: JSON.stringify({ username, password, fingerprint,"h-captcha-response": captchaToken }) 
     })
     .then(res => res.json())
     .then(data => {
@@ -174,7 +183,7 @@ function login() {
             message: err.message,
             stack: err.stack,
             url: `${API_BASE}/login`,
-            requestData: { username, password: "REDACTED", fingerprint: "REDACTED" }
+            requestData: { username, password: "REDACTED", fingerprint: "REDACTED" ,"h-captcha-response": "REDACTED"}
         });
         console.error("Login error:", err);
         alert("Server error during login");
