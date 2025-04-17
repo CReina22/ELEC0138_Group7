@@ -1,12 +1,14 @@
-import time
-import threading
 import requests
+import threading
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-# ----------- Attack Logic -----------
+import os
+print("SSLKEYLOGFILE is:", os.environ.get("SSLKEYLOGFILE"))
 
 def attack(target, stop_time, response_times):
+
     url = target["url"]
     method = target["method"]
     data = target.get("data")
@@ -27,28 +29,34 @@ def attack(target, stop_time, response_times):
             response_times[name].append(None)
         time.sleep(0.5)
 
-# ----------- plotting -----------
-
 def plot_response_times(response_times):
+
     plt.figure(figsize=(10, 6))
     used_timeout_labels = set()
 
     for name, times in response_times.items():
         x_values = np.arange(len(times))
+
+        # Separate normal and timeout (None) data
         normal_indices = [i for i, t in enumerate(times) if t is not None]
         timeout_indices = [i for i, t in enumerate(times) if t is None]
         
         normal_x = x_values[normal_indices]
         normal_y = [times[i] for i in normal_indices]
 
+        # Plot normal responses as a line
+        # plt.plot returns a list of line objects, we can use the first one to get the color
         if len(normal_x) > 0:
             line_obj = plt.plot(normal_x, normal_y, label=name)
-            line_color = line_obj[0].get_color()
+            line_color = line_obj[0].get_color()  # use the same color for timeouts
         else:
+            # If there's no normal data at all, pick a default color
             line_color = "gray"
 
+        # Plot timeouts at y=6, with the same color, using a scatter plot
         if len(timeout_indices) > 0:
-            y_timeout = 6
+            y_timeout = 6  # place timeouts at a fixed "high" value
+            # Only add a label for this endpoint's timeouts once
             timeout_label = f"{name} timeout"
             if timeout_label not in used_timeout_labels:
                 plt.scatter(timeout_indices, [y_timeout] * len(timeout_indices),
@@ -61,45 +69,13 @@ def plot_response_times(response_times):
     plt.title("Response Times for Login Endpoints")
     plt.xlabel("Request Count")
     plt.ylabel("Response Time (s)")
+    
+    
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.savefig("dos_response_time.png")
     plt.show()
-
-# ----------- plotting -----------
-
-def plot_request_stats(response_times):
-    plt.figure(figsize=(8, 5))
-    
-    labels = []
-    success_counts = []
-    timeout_counts = []
-
-    for name, times in response_times.items():
-        total = len(times)
-        success = sum(1 for t in times if t is not None)
-        fail = total - success
-
-        labels.append(name)
-        success_counts.append(success)
-        timeout_counts.append(fail)
-
-    bar_width = 0.35
-    x = np.arange(len(labels))
-
-    plt.bar(x, success_counts, width=bar_width, label="Success")
-    plt.bar(x + bar_width, timeout_counts, width=bar_width, label="Timeout")
-
-    plt.xticks(x + bar_width / 2, labels)
-    plt.ylabel("Request Count")
-    plt.title("Request Success vs Timeout")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("dos_request_stats.png")
-    plt.show()
-
-# ----------- Entry Point -----------
 
 def main():
     HOST = "https://127.0.0.1:5000"
@@ -107,17 +83,18 @@ def main():
     threads_per_target = 100
 
     targets = [
-        {
-            "name": "login",
-            "url": f"{HOST}/login",
-            "method": "POST",
-            "data": {"username": "abc", "password": "123", "fingerprint": "{}"}
-        }
+        {"name": "login",       "url": f"{HOST}/login",        "method": "POST", "data": {"username": "abc", "password": "123", "fingerprint": "{}"}},
+        #{"name": "register",    "url": f"{HOST}/register_email","method": "POST", "data": {"email": "test@example.com"}},
+        #{"name": "send-code",   "url": f"{HOST}/send-code",     "method": "POST", "data": {"email": "test@example.com"}},
+        #{"name": "verify-code", "url": f"{HOST}/verify-code",   "method": "POST", "data": {"email": "test@example.com", "code": "123456"}},
+        #{"name": "transactions","url": f"{HOST}/transactions",  "method": "GET"}
     ]
 
+    # Dictionary to store response times for each endpoint
     response_times = {target["name"]: [] for target in targets}
     stop_time = time.time() + attack_duration
 
+    # Start threads for each endpoint
     threads = []
     for target in targets:
         for _ in range(threads_per_target):
@@ -127,16 +104,17 @@ def main():
 
     for t in threads:
         t.join()
-
+    
     for name, times in response_times.items():
         total = len(times)
         success = sum(1 for t in times if t is not None)
         fail = total - success
-        print(f"[{name}] Total: {total} | Success: {success} | Timeout: {fail}")
+        print(f"[{name}] Success: {success}, Fail: {fail}")
 
-    print("Attack finished.\n📊 Generating plots...")
+    print("Attack finished.")
     plot_response_times(response_times)
-    plot_request_stats(response_times)
 
 if __name__ == "__main__":
     main()
+
+
