@@ -6,9 +6,9 @@ import re
 # ------------ Configuration ------------
 
 ALERT_LOG = "/var/log/snort/alert"
-BLOCK_DURATION = 600  # Duration to block IPs (in seconds)
+BLOCK_DURATION = 600  # secs
 
-# Match Snort alerts based on your rule messages (msg field)
+# keywords to match Snort alerts (msg field)
 TRIGGER_KEYWORDS = [
     "SYN Flood Detected",
     "HTTP GET Flood Detected",
@@ -16,55 +16,74 @@ TRIGGER_KEYWORDS = [
     "POST Flood on /login Detected"
 ]
 
-BLOCKED_IPS = set()  # Keep track of already blocked IPs
+
+BLOCKED_IPS = set()
+
+# extract IP from Snort log
 IP_PATTERN = re.compile(r"\{TCP\}\s+(\d+\.\d+\.\d+\.\d+):\d+\s+->")
 
 # ------------ IP Blocking Logic ------------
 
 def block_ip(ip):
+    """block ip and unblock it after BLOCK_DURATION seconds"""
     if ip in BLOCKED_IPS:
         return
-    print(f"Blocking IP: {ip}")
-    subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
-    BLOCKED_IPS.add(ip)
-    threading.Thread(target=unblock_ip_after_delay, args=(ip, BLOCK_DURATION)).start()
 
-def unblock_ip_after_delay(ip, delay):
-    time.sleep(delay)
-    print(f"Unblocking IP: {ip}")
-    subprocess.run(["iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"])
-    BLOCKED_IPS.discard(ip)
+    # check if iptables rule already exists
+    check = subprocess.run(
+        ["iptables", "-C", "INPUT", "-s", ip, "-j", "DROP"],
+        capture_output=True
+    ).returncode
+    if check == 0:
+        print(f"Already exists，：{ip}")
+    else:
+        print(f"Blocking IP: {ip}")
+        subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
+
+    BLOCKED_IPS.add(ip)
+
+    # unblock IP after BLOCK_DURATION seconds
+    t = threading.Thread(
+        target=lambda: (time.sleep(BLOCK_DURATION),
+                        subprocess.run(["iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"]),
+                        BLOCKED_IPS.remove(ip)),
+        daemon=True
+    )
+    t.start()
 
 # ------------ Snort Log Monitor ------------
 
 def monitor_snort_alerts():
-    print("[🔍] Monitoring Snort alerts...")
+    print("Monitoring Snort alerts...")
     with open(ALERT_LOG, "r") as f:
-        f.seek(0, 2)  # Go to the end of file like `tail -f`
+        f.seek(0, 2)  
         while True:
             line = f.readline()
             if not line:
                 time.sleep(0.5)
                 continue
 
-            for keyword in TRIGGER_KEYWORDS:
-                if keyword in line:
-                    print(f"Alert triggered: {keyword}")
-
+            # extract IP from the line
+            for kw in TRIGGER_KEYWORDS:
+                if kw in line:
+                    # if keyword found, look ahead several lines to find IP line
                     for _ in range(5):
                         ip_line = f.readline()
                         if not ip_line:
                             break
-                        print(f"Scanning line: {ip_line.strip()}")
-                        match = IP_PATTERN.search(ip_line)
-                        if match:
-                            attacker_ip = match.group(1)
-                            print(f"Detected IP: {attacker_ip}")
-                            block_ip(attacker_ip)
+                        m = IP_PATTERN.search(ip_line)
+                        if m:
+                            src = m.group(1)
+                            # skipping if IP already blocked
+                            if src in BLOCKED_IPS:
+                                break
+
+                            # alter ip for 1st time
+                            print(f"Alert triggered: {kw}")
+                            print(f"Detected attacker IP: {src}")
+                            block_ip(src)
                             break
-                    else:
-                        print("No IP found in the alert line.")
-                    break
+                    break  
 
 # ------------ Entry Point ------------
 
@@ -72,4 +91,4 @@ if __name__ == "__main__":
     try:
         monitor_snort_alerts()
     except KeyboardInterrupt:
-        print("\n Stopped monitoring. Exiting...")
+        print("\nStopped monitoring. Exiting…")

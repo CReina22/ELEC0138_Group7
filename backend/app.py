@@ -279,21 +279,21 @@ def login():
     
     ########################################################################################
     #######################    hCaptcha part below  ########################################
-    captcha_token = data.get('h-captcha-response')
+    #captcha_token = data.get('h-captcha-response')
 
-    if not captcha_token:
-        return jsonify({"success": False, "message": "Captcha missing"}), 400
+    #if not captcha_token:
+        #return jsonify({"success": False, "message": "Captcha missing"}), 400
 
-    verify_url = "https://hcaptcha.com/siteverify"
-    secret = "ES_edd7d9a86ef242da945b0b7e9065848e" 
+    #verify_url = "https://hcaptcha.com/siteverify"
+    #secret = "ES_edd7d9a86ef242da945b0b7e9065848e" 
 
-    captcha_result = requests.post(verify_url, data={
-        'secret': secret,
-        'response': captcha_token
-    }).json()
+    #captcha_result = requests.post(verify_url, data={
+        #'secret': secret,
+        #'response': captcha_token
+    #}).json()
 
-    if not captcha_result.get("success"):
-        return jsonify({"success": False, "message": "Captcha verification failed"}), 403
+    #if not captcha_result.get("success"):
+        #return jsonify({"success": False, "message": "Captcha verification failed"}), 403
     ################################## hCaptcha part above #####################################
     ############################################################################################
 
