@@ -80,14 +80,10 @@ def plot_response_times(response_times):
 def main():
     HOST = "https://127.0.0.1:5000"
     attack_duration = 15
-    threads_per_target = 100
+    threads_per_target = 1000
 
     targets = [
         {"name": "login",       "url": f"{HOST}/login",        "method": "POST", "data": {"username": "abc", "password": "123", "fingerprint": "{}"}},
-        #{"name": "register",    "url": f"{HOST}/register_email","method": "POST", "data": {"email": "test@example.com"}},
-        #{"name": "send-code",   "url": f"{HOST}/send-code",     "method": "POST", "data": {"email": "test@example.com"}},
-        #{"name": "verify-code", "url": f"{HOST}/verify-code",   "method": "POST", "data": {"email": "test@example.com", "code": "123456"}},
-        #{"name": "transactions","url": f"{HOST}/transactions",  "method": "GET"}
     ]
 
     # Dictionary to store response times for each endpoint

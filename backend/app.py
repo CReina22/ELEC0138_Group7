@@ -19,6 +19,8 @@ import numpy as np
 import json
 from sklearn.neighbors import LocalOutlierFactor
 import requests
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
@@ -50,6 +52,7 @@ app = Flask(__name__,
             template_folder='../templates', 
             static_folder='../static')   
 
+limiter = Limiter(get_remote_address, app=app)
 #CORS(app, resources={r"/*": {"origins": "*"}})
 
 
@@ -272,28 +275,41 @@ def verify_register_code():
 
 # login port
 @app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute") # Limit login attempts to 5 per minute
 def login():
-    data = request.get_json()
+    
+    try:
+        data = request.get_json(force=True)  # force JSON parsing (test with Postman)
+    except Exception as e:
+        print("[ERROR] Failed to parse JSON:", e)
+        return jsonify({"success": False, "message": "Invalid request format"}), 400
+
+    print("[DEBUG] Raw data received:", data)
+    
+    #data = request.get_json()
     username = data.get('username')
     password = data.get('password')
     
     ########################################################################################
     #######################    hCaptcha part below  ########################################
-    #captcha_token = data.get('h-captcha-response')
+    captcha_token = data.get('h-captcha-response')
+    print(f"[DEBUG] Username: {username}, Captcha token: {captcha_token}")
 
-    #if not captcha_token:
-        #return jsonify({"success": False, "message": "Captcha missing"}), 400
+    if not captcha_token:
+        return jsonify({"success": False, "message": "Captcha missing"}), 400
 
-    #verify_url = "https://hcaptcha.com/siteverify"
-    #secret = "ES_edd7d9a86ef242da945b0b7e9065848e" 
+    
+    secret = "ES_f5d1dffba9c24052a8d78644839598e4"
+    verify_url = "https://hcaptcha.com/siteverify" 
 
-    #captcha_result = requests.post(verify_url, data={
-        #'secret': secret,
-        #'response': captcha_token
-    #}).json()
+    captcha_result = requests.post(verify_url, data={
+        'secret': secret,
+        'response': captcha_token
+    }).json()
+    print("[DEBUG] Captcha verify result:", captcha_result)
 
-    #if not captcha_result.get("success"):
-        #return jsonify({"success": False, "message": "Captcha verification failed"}), 403
+    if not captcha_result.get("success"):
+        return jsonify({"success": False, "message": "Captcha verification failed"}), 403
     ################################## hCaptcha part above #####################################
     ############################################################################################
 
@@ -428,6 +444,7 @@ def login():
 
 # get transaction port
 @app.route('/transactions', methods=['GET'])
+@limiter.limit("5 per minute") # Limit transaction requests to 5 per minute
 def get_transactions():
     token = request.cookies.get("session_token")
 
