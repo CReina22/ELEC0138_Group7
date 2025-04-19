@@ -39,9 +39,37 @@ class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
             """
             environ = super(PeerCertWSGIRequestHandler, self).make_environ()
             x509_binary = self.connection.getpeercert(True)
-            x509 = OpenSSL.crypto.load_certificate( OpenSSL.crypto.FILETYPE_ASN1, x509_binary )
+            # Check if the user has chosen to provide a certificate
+            if x509_binary is not None:
+                x509 = OpenSSL.crypto.load_certificate( OpenSSL.crypto.FILETYPE_ASN1, x509_binary )
+            else:
+                x509 = None
             environ['peercert'] = x509
             return environ
+
+# Provide the server key and certificate
+app_key = 'Certificates\\server.key'
+app_key_password = None # None
+app_cert = 'Certificates\\server.cer'
+
+# List the certificates of trusted CAs that have signed client certificates
+ca_cert = 'Certificates\\root.cer'
+
+# create_default_context establishes a new SSLContext object that
+# aligns with the purpose we provide as an argument. Here we provide
+# Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
+# of client certificates.
+ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
+
+# Load the server certificate and client key to show to clients
+ssl_context.load_cert_chain( certfile=app_cert, keyfile=app_key, password=app_key_password )
+ssl_context.load_verify_locations(cafile=ca_cert)
+
+# Allow clients to provide a certificate. Also allow clients to not present a certificate.
+# High-level access bank staff must present a valid certificate to use the API.
+ssl_context.verify_mode = ssl.CERT_OPTIONAL
+
+## TLS End
 
 session_tokens = {}
 
@@ -54,30 +82,31 @@ app = Flask(__name__,
 
 ## TLS Start
 
-# # to establish an SSL socket we need the private key and certificate that
-# # we want to serve to users.
-# #
-# # app_key_password here is None, because the key isn't password protected,
-# # but if yours is protected here's where you place it.
-# app_key = '18b0fd92b2464bf73ceb33c55d7cdd62d92a3d25aa580612621adf10701eea7c-private.pem.key'
-# app_key_password = None
-# app_cert = '18b0fd92b2464bf73ceb33c55d7cdd62d92a3d25aa580612621adf10701eea7c-certificate.pem.crt'
-# # in order to verify client certificates we need the certificate of the
-# # CA that issued the client's certificate. In this example I have a
-# # single certificate, but this could also be a bundle file.
-# ca_cert = 'AmazonRootCA1.pem.crt'
-# print(ca_cert)
-# # create_default_context establishes a new SSLContext object that
-# # aligns with the purpose we provide as an argument. Here we provide
-# # Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
-# # of client certificates.
-# ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
-# # load in the certificate and private key for our server to provide to clients.
-# # force the client to provide a certificate.
-# ssl_context.load_cert_chain( certfile=app_cert, keyfile=app_key )
-# ssl_context.verify_mode = ssl.CERT_REQUIRED
-# # now we get into the regular Flask details, except we're passing in the peer certificate
-# # as a variable to the template.
+# to establish an SSL socket we need the private key and certificate that
+# we want to serve to users.
+#
+# app_key_password here is None, because the key isn't password protected,
+# but if yours is protected here's where you place it.
+app_key = 'Certificates\\server.key'
+app_key_password = None # None
+app_cert = 'Certificates\\server.cer'
+# in order to verify client certificates we need the certificate of the
+# CA that issued the client's certificate. In this example I have a
+# single certificate, but this could also be a bundle file.
+ca_cert = 'Certificates\\root.cer'
+print(ca_cert)
+# create_default_context establishes a new SSLContext object that
+# aligns with the purpose we provide as an argument. Here we provide
+# Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
+# of client certificates.
+ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
+# ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH )
+# load in the certificate and private key for our server to provide to clients.
+# force the client to provide a certificate.
+ssl_context.load_cert_chain( certfile=app_cert, keyfile=app_key, password=app_key_password )
+ssl_context.verify_mode = ssl.CERT_REQUIRED
+# now we get into the regular Flask details, except we're passing in the peer certificate
+# as a variable to the template.
 # @app.route('/')
 # def hello_world():
 #     return render_template('helloworld.html', client_cert=request.environ['peercert'])  
@@ -86,7 +115,9 @@ app = Flask(__name__,
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    # return render_template('index.html')
+    return render_template('index.html', client_cert=request.environ['peercert'])
+    
 
 
 #DB_FILE = 'customers.db'
@@ -528,6 +559,8 @@ if __name__ == '__main__':
         #To enable the use of fingerprinting authentication change this variable to True
         FINGERPRINTING = True
         #app.run(debug=True, host=host_ip, port=port)
+        #app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
+        app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
         app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
         #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
 
