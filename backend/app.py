@@ -18,7 +18,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import json
 from sklearn.neighbors import LocalOutlierFactor
+import csv
 
+## TLS Start
 
 class PeerCertWSGIRequestHandler( werkzeug.serving.WSGIRequestHandler ):
         """
@@ -79,46 +81,47 @@ app = Flask(__name__,
 
 #CORS(app, resources={r"/*": {"origins": "*"}})
 
+## API Start
 
-## TLS Start
+def to_fields(line):
+    return line.rstrip().split(",")
 
-# to establish an SSL socket we need the private key and certificate that
-# we want to serve to users.
-#
-# app_key_password here is None, because the key isn't password protected,
-# but if yours is protected here's where you place it.
-app_key = 'Certificates\\server.key'
-app_key_password = None # None
-app_cert = 'Certificates\\server.cer'
-# in order to verify client certificates we need the certificate of the
-# CA that issued the client's certificate. In this example I have a
-# single certificate, but this could also be a bundle file.
-ca_cert = 'Certificates\\root.cer'
-print(ca_cert)
-# create_default_context establishes a new SSLContext object that
-# aligns with the purpose we provide as an argument. Here we provide
-# Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
-# of client certificates.
-ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
-# ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH )
-# load in the certificate and private key for our server to provide to clients.
-# force the client to provide a certificate.
-ssl_context.load_cert_chain( certfile=app_cert, keyfile=app_key, password=app_key_password )
-ssl_context.verify_mode = ssl.CERT_REQUIRED
-# now we get into the regular Flask details, except we're passing in the peer certificate
-# as a variable to the template.
-# @app.route('/')
-# def hello_world():
-#     return render_template('helloworld.html', client_cert=request.environ['peercert'])  
+customers = []
+with open("bank_transactions.csv") as f:
+    line = next(f)
+    header = to_fields(line)
 
-## TLS End
+    for line in f:
+        fields = to_fields(line)
+        row = dict(zip(header, fields))
+        customers.append(row)
+
+@app.route('/customers/<string:TransactionID>', methods=['GET'])
+def get_employee_by_id(TransactionID: str):
+ # Only allow clients with a valid certificate to use the API
+ if not request.environ['peercert']:
+    print("Client certificate trusted")
+    return jsonify({"success": False, "message": "Unauthorized"}), 401
+ customer = get_employee(TransactionID)
+ if customer is None:
+   return jsonify({ 'error': 'Customer does not exist'}), 404
+ return jsonify(customer)
+
+def get_employee(TransactionID):
+ return next((e for e in customers if e['TransactionID'] == TransactionID), None)
+
+def employee_is_valid(customer):
+    for key in customer.keys():
+        if key != 'name':
+            return False
+    return True
+
+## API End
 
 @app.route('/')
 def home():
-    # return render_template('index.html')
-    return render_template('index.html', client_cert=request.environ['peercert'])
-    
-
+    return render_template('index.html')
+    # return render_template('index.html', client_cert=request.environ['peercert'])
 
 #DB_FILE = 'customers.db'
 DB_FILE = 'customers.db'
@@ -167,7 +170,7 @@ def send_code():
 
     if not user:
         conn.close()
-        return jsonify(success=False, message="Email not registered"), 
+        return jsonify(success=False, message="Email not registered"), 404
 
     # update the verification code in the database
     cursor.execute("UPDATE users SET verification_code_login = ? WHERE email = ?", (code, email))
@@ -314,7 +317,7 @@ def login():
     fingerprint_data = json.loads(fingerprint)
     ###########################################################
     ###########################################################
-
+    
 
     if not username or not password:
         return jsonify({"success": False, "message": "Username, password."}), 400
@@ -410,8 +413,8 @@ def login():
                 fingerprint_data.get('canvasHash')
             ))
             conn.commit()
-    ###########################################################
-    ###########################################################
+        ###########################################################
+        ###########################################################
 
 
 
@@ -541,7 +544,7 @@ def verify_otp():
 def open_browser():    
     #webbrowser.open_new("http://127.0.0.1:5000/")
     webbrowser.open_new("https://127.0.0.1:5000/") # Option for TLS handshaking
-
+ 
 # Launch Website    
 if __name__ == '__main__':
     if not os.path.exists(DB_FILE):
@@ -550,17 +553,17 @@ if __name__ == '__main__':
         #if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         #    threading.Timer(1.5, open_browser).start()
 
-        host_ip = '0.0.0.0'  # Listen on all available interfaces
+        host_ip = '127.0.0.1'  # Listen on all available interfaces
         port = 5000
         print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
         ssl_easy = ('../certs/cert.pem', '../certs/key.pem')
+        ssl_easy_raven = ('Certificates\\server.cer', 'Certificates\\server.key')
         
         #To enable the use of fingerprinting authentication change this variable to True
-        FINGERPRINTING = True
+        FINGERPRINTING = True 
+
         #app.run(debug=True, host=host_ip, port=port)
-        #app.run(debug=True, host=host_ip, port=port, ssl_context='adhoc') # Option for TLS handshaking with Dummy Certificate
+        #app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy_raven) # Option for TLS handshaking with Dummy Certificate
         app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
-        app.run(debug=True, host=host_ip, port=port, ssl_context=ssl_easy) # Option for TLS handshaking with Dummy Certificate
-        #app.run( debug=True, host=host_ip, port=port, ssl_context=ssl_context, request_handler=PeerCertWSGIRequestHandler ) # Option for TLS handshaking with Client Authentication
 
