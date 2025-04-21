@@ -72,7 +72,7 @@ def plot_response_times(response_times):
     plt.grid(True)
     plt.tight_layout()
     plt.savefig("dos_response_time.png")
-    plt.show()
+    #plt.show()
 
 def main():
     #HOST = "https://127.0.0.1:5000"
