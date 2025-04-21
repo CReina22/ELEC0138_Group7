@@ -6,7 +6,7 @@ import re
 # ------------ Configuration ------------
 
 ALERT_LOG = "/var/log/snort/alert"
-BLOCK_DURATION = 600  # secs
+BLOCK_DURATION = 300  # secs
 
 # keywords to match Snort alerts (msg field)
 TRIGGER_KEYWORDS = [
@@ -22,12 +22,22 @@ BLOCKED_IPS = set()
 # extract IP from Snort log
 IP_PATTERN = re.compile(r"\{TCP\}\s+(\d+\.\d+\.\d+\.\d+):\d+\s+->")
 
+# For tracking block timing
+ip_first_seen = {}
+ip_blocked_at = {}
+
 # ------------ IP Blocking Logic ------------
 
 def block_ip(ip):
     """block ip and unblock it after BLOCK_DURATION seconds"""
     if ip in BLOCKED_IPS:
         return
+    now = time.time()
+    if ip not in ip_first_seen:
+        ip_first_seen[ip] = now  # mark first time this IP appears in alert
+    ip_blocked_at[ip] = now
+    blocked_after = now - ip_first_seen[ip]
+
 
     # check if iptables rule already exists
     check = subprocess.run(
@@ -40,6 +50,7 @@ def block_ip(ip):
         print(f"Blocking IP: {ip}")
         subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
 
+    print(f"[INFO] IP {ip} blocked after {blocked_after:.2f} seconds")
     BLOCKED_IPS.add(ip)
 
     # unblock IP after BLOCK_DURATION seconds

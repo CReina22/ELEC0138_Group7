@@ -44,13 +44,10 @@ def plot_response_times(response_times):
         normal_x = x_values[normal_indices]
         normal_y = [times[i] for i in normal_indices]
 
-        # Plot normal responses as a line
-        # plt.plot returns a list of line objects, we can use the first one to get the color
         if len(normal_x) > 0:
             line_obj = plt.plot(normal_x, normal_y, label=name)
-            line_color = line_obj[0].get_color()  # use the same color for timeouts
+            line_color = line_obj[0].get_color() 
         else:
-            # If there's no normal data at all, pick a default color
             line_color = "gray"
 
         # Plot timeouts at y=6, with the same color, using a scatter plot
@@ -78,7 +75,8 @@ def plot_response_times(response_times):
     plt.show()
 
 def main():
-    HOST = "https://127.0.0.1:5000"
+    #HOST = "https://127.0.0.1:5000"
+    HOST ="https://test.mydomain.com:5000/"
     attack_duration = 15
     threads_per_target = 1000
 
@@ -86,11 +84,11 @@ def main():
         {"name": "login",       "url": f"{HOST}/login",        "method": "POST", "data": {"username": "abc", "password": "123", "fingerprint": "{}"}},
     ]
 
-    # Dictionary to store response times for each endpoint
+    # Dictionary to store response times for endpoint
     response_times = {target["name"]: [] for target in targets}
     stop_time = time.time() + attack_duration
 
-    # Start threads for each endpoint
+    # Start threads for endpoint
     threads = []
     for target in targets:
         for _ in range(threads_per_target):
