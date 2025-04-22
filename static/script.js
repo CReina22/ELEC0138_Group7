@@ -9,7 +9,7 @@ console.log('Using API Base:', API_BASE);  // print current API base
 function showRegister() {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('register-section').style.display = 'block';
-    document.getElementById('dashboard-section').style.display = 'none';
+    //document.getElementById('dashboard-section').style.display = 'none';
 
     // clear input fields
     document.getElementById('register-username').value = '';
@@ -23,7 +23,7 @@ function showLogin() {
 
     document.getElementById('register-section').style.display = 'none';
     document.getElementById('login-section').style.display = 'block';
-    document.getElementById('dashboard-section').style.display = 'none';
+    //document.getElementById('dashboard-section').style.display = 'none';
     document.getElementById('email-login-section').style.display = 'none';
 
     // clear input fields
@@ -33,8 +33,8 @@ function showLogin() {
 
 
 // load transactions from API
-function loadTransactions() {
-    fetch(`${API_BASE}/transactions`,{
+function loadTransactions(apiUrl = '/api/transactions') {
+    fetch(`${API_BASE}${apiUrl}`, {
         method: "GET",
         credentials: "include"  // include cookies in the request
     })
@@ -43,8 +43,8 @@ function loadTransactions() {
             alert('Session expired or unauthorized. Please login again.');
             showLogin();
             return null;
-    }
-    return response.json();
+        }
+        return response.json();
     })
     .then(data => {
         if (!data) return; // no data to display
@@ -60,13 +60,13 @@ function loadTransactions() {
                 <td>${txn['TransactionAmount (INR)']}</td>
                 <td>${txn.TransactionDate || '-'}</td>
                 <td>${txn.CustAccountBalance || '-'}</td>
-                `;
+            `;
             tableBody.appendChild(row);
         });
     })
     .catch(error => {
         console.error('Error fetching transactions:', error);
-        alert('Server error. Please try again later.'); 
+        alert('Server error. Please try again later.');
     });
 }
 
@@ -150,16 +150,19 @@ function login() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('auth-box').style.display = 'none';
+            //document.getElementById('auth-box').style.display = 'none';
 
-            loadTransactions(); // load transactions after login
+            //loadTransactions(); // load transactions after login
 
-            document.getElementById('dashboard-section').style.display = 'block';
+            //document.getElementById('dashboard-section').style.display = 'block';
             // change background
-            document.body.classList.remove('with-bg');
-            document.body.classList.add('no-bg');
+            //document.body.classList.remove('with-bg');
+            //document.body.classList.add('no-bg');
 
-            document.getElementById('user-display').innerText = username;
+            //document.getElementById('user-display').innerText = username;
+
+            // Redirect to transactions page
+            window.location.href = '/transactions';
         
         } else if (data.requires_otp) { // Used for Anomaly Detection
             showOtpPopup(data.email);   
@@ -238,13 +241,16 @@ function logout() {
         } else {
             console.warn('Logout failed:', data.message);
         }
-        document.getElementById('dashboard-section').style.display = 'none';
-        document.getElementById('auth-box').style.display = 'block';
+        document.cookie = "session_token=; Path=/; Max-Age=0";
+
+        //document.getElementById('dashboard-section').style.display = 'none';
+        //document.getElementById('auth-box').style.display = 'block';
 
         // change background
-        document.body.classList.remove('no-bg');
-        document.body.classList.add('with-bg');
-        showLogin(); 
+        //document.body.classList.remove('no-bg');
+        //document.body.classList.add('with-bg');
+        //showLogin(); 
+        window.location.href = '/';
     })
     .catch(error => {
         console.error('Error during logout:', error);

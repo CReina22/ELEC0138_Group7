@@ -334,7 +334,7 @@ def login():
     ###########################################################
     if user:
         user_id = user[0]
-        is_fake = user[-1]
+        is_fake = user[-2]
 
         if FINGERPRINTING == True:
             # Prepare fingerprint details for comparison and encode features
@@ -437,11 +437,20 @@ def login():
     conn.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
+# transactions page
+@app.route('/transactions')
+def transactions_page():
+    username = session_tokens.get(request.cookies.get('session_token'), {}) \
+                                .get('username', '')
+    return render_template('transactions.html', username=username)
 
-# get transaction port
-@app.route('/transactions', methods=['GET'])
-def get_transactions():
+# get transactions API
+@app.route('/api/transactions', methods=['GET'])
+def get_transactions_api():
     token = request.cookies.get("session_token")
+    print("token from cookie:", token)
+    print("current session_tokens:", session_tokens.keys())  # effective session tokens
+    print("user info:", session_tokens.get(token))  # if no , means clear
 
     # check if the token is valid
     if not token or token not in session_tokens:
@@ -478,7 +487,12 @@ def logout():
         session_tokens.pop(token)  # delete the session token from the server
     # clear the session token cookie
     resp = make_response(jsonify({"success": True, "message": "Logged out"}))
-    resp.set_cookie("session_token", '', expires=0)
+    resp.set_cookie(
+        "session_token", 
+        "", 
+        path="/",      
+        max_age=0      
+    )
     return resp
 
 
