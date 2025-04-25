@@ -62,7 +62,7 @@ Please look at the backend folder to view certificate creation scripts.
 Code to stimlate the attack is in the file called 'MITM phishing attack'. 
 To run the phishing website:               `python phishing_app.py`
 
-Run the legitmate app and phishing app on a local server so the flask apps are accessible in the Kali VM. 
+Run the legitmate app and phishing app on a local server in different python terminals so the flask apps are accessible in the Kali VM. 
 
 To do that use:     `https://<ip-address-of-your-computer>:5002/` and for legitmate site:       `https://<ip-address-of-your-computer>:5000/`
 The ip address of your computer can be found by opening the command prompt and entering:                   `ipconfig`
