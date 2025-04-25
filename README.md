@@ -73,4 +73,4 @@ In the URL Dectecton folder contains:
 - Raw phishing dataset: Phishing URLs.csv (other dataset too large to be added to Github)
 - Processed dataset: processed_dataset.csv
 
-
+The scan_phishing_url_extension folder contains all the files for the chrome extension  which can be added to your extension by going to load unpacked and selecting the entire scan_phishing_url_extension folder
