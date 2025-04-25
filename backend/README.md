@@ -16,3 +16,6 @@ To use the API, visit https://127.0.0.1:5000/customers/Tx, where x is any number
 
 ### Client Certificate Authentication - Certificate Generation Scripts 
 
+- csr_handler.py - Run this script to generate an encrypted, password-protected ("passphrase") private key and a Certificate Signing Request
+
+- signing_handler.py - Run this script to generate a certificate signed by the root CA. The same private key from csr_handler.py must be used.
