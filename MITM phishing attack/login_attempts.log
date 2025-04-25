@@ -1,0 +1,4 @@
+2025-04-24 18:35:20,374 - Successful login with: Username: admin, Password: 1234, Status: 200
+2025-04-24 18:35:20,376 - Session token: admin_2370
+2025-04-24 18:35:20,377 - 192.168.0.46 - - [24/Apr/2025 18:35:20] "POST /login HTTP/1.1" 200 -
+
