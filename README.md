@@ -60,7 +60,10 @@ Please look at the backend folder to view certificate creation scripts.
 
 ### Man in the middle phishing attack
 Code to stimlate the attack is in the file called 'MITM phishing attack'. 
-To run the phishing website:               `python phishing_app.py`
+1. Create a virtual environment:                `python -m venv myenv`
+2. Activate environment:                       `myenv\Scripts\activate`
+3. Install dependencies:                     `pip install -r requirements.txt`  
+4. To run the phishing website:               `python phishing_app.py`
 
 Run the legitmate app and phishing app on a local server in different python terminals so the flask apps are accessible in the Kali VM. 
 
