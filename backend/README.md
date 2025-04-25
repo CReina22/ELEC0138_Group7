@@ -6,9 +6,9 @@ When on the website, you will be asked to present a certificate. This step is op
 
 Two certificates are provided for this example. The password is "12345678". To use these certificates, you must run the website on Firefox or a broswer than supports .pck12 files:
 
-- backend\Client Certificates\Real_Client_Cert.pcks12 - A certificate signed by the CA and holds the correct private key. This will allow you to enter the website and the API.
+- ELEC0138_Group7\Client Certificates\Real_Client_Cert.pcks12 - A certificate signed by the CA and holds the correct private key. This will allow you to enter the website and the API.
 
-- backend\Client Certificates\Client_Cert_Wrong_Private_Key.pcks12 - A certificate signed by the CA but does not hold the correct private key. This will deny you access to the website and API.
+- ELEC0138_Group7\Client Certificates\Client_Cert_Wrong_Private_Key.pcks12 - A certificate signed by the CA but does not hold the correct private key. This will deny you access to the website and API.
 
 Presenting a certificate not signed by the root CA (backend\Certificates\root.pem) denies access to the website and API.
 
