@@ -1,0 +1,30 @@
+  {
+    "manifest_version": 3,
+    "name": "Gmail URL Scanner",
+    "version": "1.0",
+    "description": "Scans Gmail emails for URLs and displays them on screen.",
+    "permissions": ["scripting", "tabs", "activeTab", "storage"],
+    "host_permissions": ["https://mail.google.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://mail.google.com/*"],
+        "js": ["libs/ort.min.js","content.js"],
+        "run_at": "document_end"
+      }
+    ],
+    "action": {
+        "default_title": "URL Scanner",
+        "default_popup": "popup.html",
+        "default_icon": "icon2.png"
+    },
+    "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'"
+    },
+    "web_accessible_resources": [
+    {
+      "resources": ["libs/ort.min.js","libs/ort-wasm-simd-threaded.jsep.mjs",
+          "libs/ort-wasm-simd-threaded.jsep.wasm","dt_phishing_model.onnx"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+  }
