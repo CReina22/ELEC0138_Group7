@@ -51,4 +51,26 @@ Client Certificates\Client_Cert_Wrong_Private_Key.pcks12 - A certificate signed 
 
 Presenting a certificate not signed by the root CA (backend\Certificates\root.pem) denies access to the website and API.
 
-To use the API, visit https://127.0.0.1:5000/customers/Tx, where x is any number. Tx represents the transaction ID of the bank.
+To use the API, visit https://127.0.0.1:5000/customers/Tx, where x is any number. Tx represents the transaction ID of the bank.##
+
+### Man in the middle phishing attack
+Code to stimlate the attack is in the file called 'MITM phishing attack'. 
+To run the phishing website:  
+                              `python phishing_app.py`
+Run the legitmate app and phishing app on a local server so the flask apps are accessible in the Kali VM. 
+To do that use:
+                              `https://<ip-address-of-your-computer>:5002/`
+The ip address of your computer can be found by opening the command prompt and entering: `ipconfig`
+Your IP address should be the ip address under Wireless LAN adapter WiFi ->  IPv4 Address
+
+### AI based Phishing URL scanner
+The dataset used for training and testing the dataset: `https://data.mendeley.com/datasets/vfszbj9b36/1`
+All files are under the Phishing URL Dectection folder
+In the URL Dectecton folder contains:
+- Trained Decision tree model: DT_model.ipynb
+- Trained Logistic Regression model: LR model.ipynb
+- Trained Random Forest model: ML model RF.ipynb
+- Raw phishing dataset: Phishing URLs.csv (other dataset too large to be added to Github)
+- Processed dataset: processed_dataset.csv
+
+
