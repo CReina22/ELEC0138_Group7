@@ -55,16 +55,16 @@ To use the API, visit https://127.0.0.1:5000/customers/Tx, where x is any number
 
 ### Man in the middle phishing attack
 Code to stimlate the attack is in the file called 'MITM phishing attack'. 
-To run the phishing website:  
-                              `python phishing_app.py`
+To run the phishing website:               `python phishing_app.py`
+
 Run the legitmate app and phishing app on a local server so the flask apps are accessible in the Kali VM. 
-To do that use:
-                              `https://<ip-address-of-your-computer>:5002/`
-The ip address of your computer can be found by opening the command prompt and entering: `ipconfig`
+
+To do that use:     `https://<ip-address-of-your-computer>:5002/` and for legitmate site:       `https://<ip-address-of-your-computer>:5000/`
+The ip address of your computer can be found by opening the command prompt and entering:                   `ipconfig`
 Your IP address should be the ip address under Wireless LAN adapter WiFi ->  IPv4 Address
 
 ### AI based Phishing URL scanner
-The dataset used for training and testing the dataset: `https://data.mendeley.com/datasets/vfszbj9b36/1`
+The dataset used for training and testing the dataset:                               `https://data.mendeley.com/datasets/vfszbj9b36/1`
 All files are under the Phishing URL Dectection folder
 In the URL Dectecton folder contains:
 - Trained Decision tree model: DT_model.ipynb
