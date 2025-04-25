@@ -1,4 +1,7 @@
 # ELEC0138_Group7
+
+Watch the video demonstration via the YouTube link: https://youtu.be/wB_RCT-QJBY
+
 Run the command `conda env create -f environment.yml`
 
 Run the command `conda activate DigitalBank ` to activate the environment.
