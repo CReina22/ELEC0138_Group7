@@ -59,11 +59,6 @@ app_cert = 'Certificates\\server.cer'
 
 # List the certificates of trusted CAs that have signed client certificates
 ca_cert = 'Certificates\\root.cer'
-
-# create_default_context establishes a new SSLContext object that
-# aligns with the purpose we provide as an argument. Here we provide
-# Purpose.CLIENT_AUTH, so the SSLContext is set up to handle validation
-# of client certificates.
 ssl_context = ssl.create_default_context( purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_cert )
 
 # Load the server certificate and client key to show to clients
@@ -104,7 +99,7 @@ with open("bank_transactions.csv") as f:
 def get_employee_by_id(TransactionID: str):
  # Only allow clients with a valid certificate to use the API
  if not request.environ['peercert']:
-    print("Client certificate trusted")
+    print("Client certificate not trusted")
     return jsonify({"success": False, "message": "Unauthorized"}), 401
  customer = get_employee(TransactionID)
  if customer is None:
@@ -606,7 +601,7 @@ if __name__ == '__main__':
         #if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         #    threading.Timer(1.5, open_browser).start()
 
-        host_ip = '127.0.0.1'  # Listen on all available interfaces
+        host_ip = '0.0.0.0'  # Listen on all available interfaces
         port = 5000
         print(f"Backend server is running at https://{host_ip}:{port}")
         print(f"Access from another device using your computer's IP address and port {port}")
